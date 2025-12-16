@@ -1,6 +1,7 @@
 [packages]
 classyclick = "*"
 requests = "*"
+platformdirs = "*"
 
 [dev-packages]
 ruff = "*"
@@ -11,4 +12,4 @@ build = "*"
 pytest-socket = "*"
 
 [requires]
-python_version = "3.10"
+python_version = "3.11"

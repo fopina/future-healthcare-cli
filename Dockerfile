@@ -1,4 +1,4 @@
-FROM python:3.10-alpine AS base
+FROM python:3.11-alpine AS base
 
 # --- builder
 FROM base AS builder
