@@ -2,30 +2,32 @@ import classyclick
 import click
 
 from ..client import Client
-from ..utils import token_path
 from . import _mixins
 from .cli import cli
 
 
 @classyclick.command(group=cli)
 class Consult(_mixins.ContractMixin, _mixins.TokenMixin):
-    person: str = classyclick.Option(
-        '-p', help='Name of the insured person. If not specified or multiple matches, it will be prompted interactively'
-    )
-    service: str = classyclick.Option(
-        '-s',
-        help='Name of the service to request refund. If not specified or multiple matches, it will be prompted interactively',
-    )
-
     _client = None
 
     def __call__(self):
-        path = token_path()
-        try:
-            token = path.read_text()
-        except FileNotFoundError:
-            raise click.ClickException('Run `login` first')
-
-        self._client = Client(token=token)
+        self._client = Client(token=self.token)
         assert self._client.validate_feature(self.contract, 'REFUNDS_CONSULT'), 'Refund consult not available'
-        print(self._client.unified_refunds(self.contract))
+        page = 1
+        while True:
+            r = self._client.unified_refunds(self.contract, page=page)
+            for refund in r['Refunds']:
+                # https://clientes-vic.future-healthcare.net/services/refunds/consult/XXX/detail
+                # XXX = refund["ProcessNr"]
+                received = refund['Claims'][0]['TotalInsurer']
+                if received:
+                    received_str = click.style(received, fg='green')
+                else:
+                    received_str = click.style(received, fg='red')
+                click.echo(
+                    f'{refund["Claims"][0]["DateOfTreatment"]} ({refund["ExpenseDate"]})[{refund["Claims"][0]["ServiceName"]}] - {refund["PersonName"]} - {refund["Claims"][0]["TotalCoPayment"]} + {received_str} = {refund["TotalValue"]}'
+                )
+            if r['PaginationResult']['CurrentPage'] < r['PaginationResult']['TotalPages']:
+                page += 1
+            else:
+                break
