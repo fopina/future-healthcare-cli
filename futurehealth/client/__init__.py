@@ -105,3 +105,9 @@ class Client(requests.Session):
 
         r = self.get(f'contracts/{quote(contract_token, safe="")}/refunds-requests/setup', _token=True)
         return r['body']
+
+    def unified_refunds(self, contract_token: str, page_size=5, page=1) -> bool:
+        """Validate that contract has feature."""
+
+        r = self.get(f'contracts/{quote(contract_token, safe="")}/unified-refunds', _token=True)
+        return r['body']

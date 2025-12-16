@@ -4,12 +4,12 @@ import classyclick
 import click
 
 from ..client import Client
-from ..utils import token_path
+from . import _mixins
 from .cli import cli
 
 
 @classyclick.command(group=cli)
-class Submit:
+class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
     person: str = classyclick.Option(
         '-p', help='Name of the insured person. If not specified or multiple matches, it will be prompted interactively'
     )
@@ -21,25 +21,13 @@ class Submit:
     _client = None
 
     def __call__(self):
-        path = token_path()
-        try:
-            token = path.read_text()
-        except FileNotFoundError:
-            raise click.ClickException('Run `login` first')
-
-        self._client = Client(token=token)
+        self._client = Client(token=self.token)
+        assert self._client.validate_feature(self.contract, 'REFUNDS_SUBMISSION'), 'Refund submission not available'
 
         service = self.get_service()
         person = self.get_person()
         print(service)
         print(person)
-
-    @cached_property
-    def contract(self):
-        contract = self._client.contracts()[0]
-        assert contract['ContractState'] == 'ACTIVE', 'Contract NOT active'
-        assert self._client.validate_feature(contract['Token'], 'REFUNDS_SUBMISSION'), 'Refund submission not available'
-        return contract['Token']
 
     @cached_property
     def refunds_request_setup(self):
