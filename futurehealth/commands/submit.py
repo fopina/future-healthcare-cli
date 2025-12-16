@@ -20,3 +20,5 @@ class Submit:
         assert contract['ContractState'] == 'ACTIVE', 'Contract NOT active'
         contract = contract['Token']
         assert c.validate_feature(contract, 'REFUNDS_SUBMISSION'), 'Refund submission not available'
+
+        print(c.refunds_request_setup(contract, 'x'))

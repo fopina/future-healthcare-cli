@@ -59,25 +59,29 @@ class Client(requests.Session):
                 kwargs['headers'] = headers
             if _token:
                 kwargs['headers']['Authorization'] = f'Bearer {self.token}'
-        return super().request(method, url, *args, **kwargs)
+        r = super().request(method, url, *args, **kwargs)
+        if r.status_code != 200:
+            try:
+                rd = r.json()
+                exc = exceptions.ClientError(f'Contracts - {rd["resultMessage"]} ({r.status_code})')
+            except Exception:
+                exc = exceptions.ClientError('Unexpected error')
+            raise exc
+
+        r = r.json()
+        if not r['success']:
+            raise exceptions.ClientError('Unexpected!! Status 200 without success??')
+        return r
 
     def login(self, username, password) -> dict:
         """Login."""
 
         payload = {'username': username, 'password': password}
 
-        r = self.post('login', json=payload)
-        if r.status_code != 200:
-            try:
-                rd = r.json()
-                exc = exceptions.LoginError(f'{rd["resultMessage"]} ({r.status_code})')
-            except Exception:
-                exc = exceptions.LoginError('Unexpected error')
-            raise exc
-
-        r = r.json()
-        if not r['success']:
-            raise exceptions.LoginError('Unexpected!! Status 200 without success??')
+        try:
+            r = self.post('login', json=payload)
+        except exceptions.ClientError as e:
+            raise exceptions.LoginError(str(e))
 
         self.token = r['body']['token']
         return r
@@ -86,18 +90,6 @@ class Client(requests.Session):
         """Retrieve contracts for the current account."""
 
         r = self.get('contracts', _token=True)
-        if r.status_code != 200:
-            try:
-                rd = r.json()
-                exc = exceptions.ClientError(f'Contracts - {rd["resultMessage"]} ({r.status_code})')
-            except Exception:
-                exc = exceptions.ClientError('Unexpected error')
-            raise exc
-
-        r = r.json()
-        if not r['success']:
-            raise exceptions.ClientError('Unexpected!! Status 200 without success??')
-
         return r['body']['Contracts']
 
     def validate_feature(self, contract_token: str, feature: str) -> bool:
@@ -106,16 +98,10 @@ class Client(requests.Session):
         r = self.post(
             f'contracts/{quote(contract_token, safe="")}/validate-feature', _token=True, json={'feature': feature}
         )
-        if r.status_code != 200:
-            try:
-                rd = r.json()
-                exc = exceptions.ClientError(f'Contracts - {rd["resultMessage"]} ({r.status_code})')
-            except Exception:
-                exc = exceptions.ClientError('Unexpected error')
-            raise exc
-
-        r = r.json()
-        if not r['success']:
-            raise exceptions.ClientError('Unexpected!! Status 200 without success??')
-
         return r['body']['valid']
+
+    def refunds_request_setup(self, contract_token: str) -> bool:
+        """Validate that contract has feature."""
+
+        r = self.get(f'contracts/{quote(contract_token, safe="")}/refunds-requests/setup', _token=True)
+        return r['body']
