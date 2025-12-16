@@ -1,5 +1,7 @@
 import requests
 
+from . import exceptions
+
 
 class Client(requests.Session):
     """HTTP Client for Future Healthcare API.
@@ -8,20 +10,18 @@ class Client(requests.Session):
     and persistent configuration across requests.
     """
 
-    def __init__(self, base_url=None, partnership='vic', language='pt-PT', *args, **kwargs):
+    def __init__(self, base_url=None, partnership='vic', *args, **kwargs):
         """Initialize the Client.
 
         Args:
             base_url: Optional base URL for API requests
             partnership: Partnership identifier (default: 'vic')
-            language: Language code (default: 'pt-PT')
             *args: Additional positional arguments for requests.Session
             **kwargs: Additional keyword arguments for requests.Session
         """
         super().__init__(*args, **kwargs)
         self.base_url = base_url
         self.partnership = partnership
-        self.language = language
 
     def request(self, method, url, *args, **kwargs):
         """Make an HTTP request.
@@ -41,28 +41,28 @@ class Client(requests.Session):
             url = f'{self.base_url.rstrip("/")}/{url.lstrip("/")}'
         return super().request(method, url, *args, **kwargs)
 
-    def login(self, username, password):
-        """Login to Future Healthcare API.
-
-        Args:
-            username: User's email/username
-            password: User's password
-
-        Returns:
-            requests.Response object with login result
-        """
+    def login(self, username, password) -> dict:
+        """Login to Future Healthcare API."""
         url = 'https://ws.future-healthcare.net/prd/api/fhc/fhcp/login'
 
         headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'X-Partnership': self.partnership,
-            'X-Partnershipapilink': self.partnership,
-            'X-Language': self.language,
-            'Origin': f'https://clientes-{self.partnership}.future-healthcare.net',
-            'Referer': f'https://clientes-{self.partnership}.future-healthcare.net/',
         }
 
         payload = {'username': username, 'password': password}
 
-        return self.post(url, json=payload, headers=headers)
+        r = self.post(url, json=payload, headers=headers)
+        if r.status_code != 200:
+            try:
+                rd = r.json()
+                exc = exceptions.LoginError(f'{rd["resultMessage"]} ({r.status_code})')
+            except Exception:
+                exc = exceptions.LoginError('Unexpected error')
+            raise exc
+
+        r = r.json()
+        if not r['success']:
+            raise exceptions.LoginError('Unexpected!! Status 200 without success??')
+        return r

@@ -1,9 +1,9 @@
 import classyclick
 import click
 
-from ..client import Client
-from .cli import cli
+from .. import client
 from ..utils import token_path
+from .cli import cli
 
 
 @classyclick.command(group=cli)
@@ -12,14 +12,12 @@ class Login:
     password: str = classyclick.Option('-p', help='Password')
 
     def __call__(self):
-        c = Client()
-        r = c.login(self.username, self.password)
-        if r.status_code != 401:
-            # 401 to be json-parsed as well
-            r.raise_for_status()
-        r = r.json()
-        if not r['success']:
-            raise click.ClickException(f'Login failed - {r["resultMessage"]}')
+        c = client.Client()
+        try:
+            r = c.login(self.username, self.password)
+        except client.exceptions.LoginError as e:
+            raise click.ClickException(e)
+
         path = token_path()
         path.parent.mkdir(parents=True, exist_ok=True, mode=700)
         path.write_text(r['body']['token'])
