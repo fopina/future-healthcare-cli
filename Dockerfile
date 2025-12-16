@@ -1,4 +1,3 @@
-# TODO: remove all file if no docker image is required (ie: just a python library)
 FROM python:3.10-alpine AS base
 
 # --- builder
@@ -15,7 +14,6 @@ RUN pip install --target=/app -r requirements.txt
 FROM base
 COPY --from=builder /app /app
 ENV PYTHONPATH=/app
-# TODO: replace with your package name
-COPY example /app/example
+COPY futurehealth /app/futurehealth
 
-ENTRYPOINT ["python3", "-m", "example"]
+ENTRYPOINT ["python3", "-m", "futurehealth"]
