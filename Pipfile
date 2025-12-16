@@ -1,5 +1,6 @@
 [packages]
 classyclick = "*"
+requests = "*"
 
 [dev-packages]
 ruff = "*"
