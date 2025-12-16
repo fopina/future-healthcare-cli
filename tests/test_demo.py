@@ -1,7 +1,8 @@
 import unittest
 
-import futurehealth
 import futurehealth.demo
+
+import futurehealth
 
 
 class Test(unittest.TestCase):

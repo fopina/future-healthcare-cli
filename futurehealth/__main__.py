@@ -1,17 +1,11 @@
-import sys
+import pkgutil
 
-from . import demo
+from . import commands
+from .commands.cli import cli
 
-# TODO: only use __main__.py if your package is a CLI tool
-
-
-def main():
-    arg = ' '.join(sys.argv[1:])
-    if not arg:
-        print('Got nothing to say?')
-    else:
-        print(demo.echo(arg))
+for importer, modname, ispkg in pkgutil.iter_modules(commands.__path__):
+    __import__(f'futurehealth.commands.{modname}')
 
 
 if __name__ == '__main__':
-    main()
+    cli()
