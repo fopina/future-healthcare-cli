@@ -6,7 +6,6 @@ pytest = "*"
 pytest-cov = "*"
 twine = "*"
 build = "*"
-pyproject-pipenv = "*"
 pytest-socket = "*"
 
 [requires]
