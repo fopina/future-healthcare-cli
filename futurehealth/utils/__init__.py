@@ -4,9 +4,13 @@ from pathlib import Path
 
 from platformdirs import user_config_path
 
+from .pdf import read_pdf
+
 APP_NAME = 'future-healthcare-cli'
 CONFIG_FILENAME = 'config.toml'
 TOKEN_FILENAME = 'token.txt'
+
+__all__ = ['read_pdf']
 
 
 def config_path() -> Path:
