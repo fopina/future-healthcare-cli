@@ -53,20 +53,19 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
 
     def __call__(self):
         self.setup_logging()
-        return
         try:
             data = self.parse_receipt()
 
             self._client = Client(token=self.token)
             assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
             building = self.get_building(data['business_nif'])
-            logging.info('Building selected: %s - %s', building['id'], building['name'])
+            self.console_logger.info('Building selected: %s - %s', building['id'], building['name'])
             docs = self._client.files(self.receipt_file, is_invoice=True)
-            logging.info('Document created: %s', docs['guid'])
+            self.console_logger.info('Document created: %s', docs['guid'])
             service = self.get_service()
-            logging.info('Service selected: %s - %s', service['Id'], service['Name'])
+            self.console_logger.info('Service selected: %s - %s', service['Id'], service['Name'])
             person = self.get_person()
-            logging.info('Person selected: %s - %s', person['CardNumber'], person['Name'])
+            self.console_logger.info('Person selected: %s - %s', person['CardNumber'], person['Name'])
             self.contract.multiple_refunds_requests(
                 person['CardNumber'],
                 service['Id'],
@@ -81,7 +80,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
                 person['Email'],
             )
         except Exception:
-            logging.exception('Failed to submit with exception')
+            self.file_logger.exception('Failed to submit with exception')
             raise
 
     def parse_receipt(self):
@@ -108,9 +107,9 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         completion = client.chat.completions.create(model=model, messages=messages, max_completion_tokens=500)
 
         message = completion.choices[0].message.content
-        logging.info(f'Parsed receipt details: {message}')
+        self.console_logger.info(f'Parsed receipt details: {message}')
         data = utils.parse_json_from_model(message)
-        logging.info(f'Parsing token usage: {completion.usage}')
+        self.console_logger.info(f'Parsing token usage: {completion.usage}')
         return data
 
     def setup_logging(self):
@@ -126,25 +125,27 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         receipt_copy = logs_dir / f'{prefix}_{self.receipt_file.name}'
         shutil.copy2(self.receipt_file, receipt_copy)
 
-        # Set up logging to file
-        log_file = logs_dir / f'{prefix}.log'
-        logging.basicConfig(
-            filename=log_file,
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
-
-        # Also log to console
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
+        # Set up formatters
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-        console_handler.setFormatter(formatter)
-        logging.getLogger().addHandler(console_handler)
 
-        logging.info(f'Starting submission for file: {self.receipt_file}')
-        logging.info(f'Receipt file copied to: {receipt_copy}')
-        logging.info(f'Logging to: {log_file}')
+        # Create file-only logger
+        self.file_logger = logging.getLogger(f'file_{prefix}')
+        self.file_logger.setLevel(logging.INFO)
+        file_handler = logging.FileHandler(logs_dir / f'{prefix}.log')
+        file_handler.setFormatter(formatter)
+        self.file_logger.addHandler(file_handler)
+
+        # Create file-and-console logger
+        self.console_logger = logging.getLogger(f'console_{prefix}')
+        self.console_logger.setLevel(logging.INFO)
+        self.console_logger.addHandler(file_handler)
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        self.console_logger.addHandler(console_handler)
+
+        self.console_logger.info(f'Starting submission for file: {self.receipt_file}')
+        self.console_logger.info(f'Receipt file copied to: {receipt_copy}')
+        self.console_logger.info(f'Logging to: {logs_dir / f"{prefix}.log"}')
 
     @cached_property
     def refunds_request_setup(self):
