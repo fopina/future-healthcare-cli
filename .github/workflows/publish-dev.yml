@@ -49,7 +49,11 @@ jobs:
         id: sanitize_branch
         run: |
           SANITIZED_BRANCH=$(echo -n "${{ github.ref_name }}" | tr '/' '-' | tr -c '[:alnum:]-' '-')
-          echo sanitized_branch=$SANITIZED_BRANCH >> $GITHUB_OUTPUT
+          if [[ $SANITIZED_BRANCH == dev* ]]; then
+            echo sanitized_branch=$SANITIZED_BRANCH >> $GITHUB_OUTPUT
+          else
+            echo sanitized_branch=branch-$SANITIZED_BRANCH >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push image - release
         uses: docker/build-push-action@v6
