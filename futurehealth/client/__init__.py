@@ -1,10 +1,11 @@
 import random
+from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
 
 import requests
 
-from . import exceptions
+from . import exceptions, models
 
 
 class Client(requests.Session):
@@ -112,6 +113,13 @@ class Client(requests.Session):
         return r['body']
 
 
+@dataclass
+class RefundsRequestSetupResponse:
+    services: list[models.Service]
+    insured_persons: list[models.Person]
+    other: dict
+
+
 class ContractClient(requests.Session):
     def __init__(
         self,
@@ -136,11 +144,16 @@ class ContractClient(requests.Session):
         r = self.post('validate-feature', json={'feature': feature})
         return r['body']['valid']
 
-    def refunds_request_setup(self) -> bool:
+    def refunds_request_setup(self) -> RefundsRequestSetupResponse:
         """Validate that contract has feature."""
 
         r = self.get('refunds-requests/setup')
-        return r['body']
+        data = r['body']
+        services = [models.Service(**obj) for obj in data['Services']]
+        ip = [models.Person(**obj) for obj in data['InsuredPersons']]
+        del data['Services']
+        del data['InsuredPersons']
+        return RefundsRequestSetupResponse(services, ip, data)
 
     def unified_refunds(self, page_size=5, page=1) -> bool:
         """Validate that contract has feature."""
@@ -151,14 +164,14 @@ class ContractClient(requests.Session):
         )
         return r['body']
 
-    def load_buildings(self, nif: str) -> bool:
+    def load_buildings(self, nif: str) -> list[models.Building]:
         """Validate that contract has feature."""
 
         r = self.post(
             'refunds-requests/loadBuildings',
             json={'practiceNif': nif},
         )
-        return r['body']
+        return [models.Building(**building) for building in r['body']['buildings']]
 
     def multiple_refunds_requests(
         self,
