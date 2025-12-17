@@ -1,10 +1,9 @@
 import unittest
 
-import example
-import example.demo
+from futurehealth.commands import login
 
 
 class Test(unittest.TestCase):
-    # TODO: update with your own unit tests and assertions
-    def test_echo(self):
-        self.assertEqual(example.demo.echo('hey'), 'HEY right back at ya!')
+    def test_login(self):
+        cmd = login.Login(username='x')
+        self.assertEqual(cmd.username, 'x')
