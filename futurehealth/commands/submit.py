@@ -58,8 +58,8 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         self.setup_logging()
         try:
             data = self.parse_receipt()
-            self.console_logger.info(f'Parsed data: {data}')
             self.review_data(data)
+            self.console_logger.info(f'Parsed data after review: {data}')
 
             self._client = client.Client(token=self.token)
             assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
@@ -132,6 +132,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             raise click.ClickException(f'{data.date} does not seem to contain full year')
         data.date = '-'.join(date_parts)
         self.console_logger.debug(f'Tokens used: {completion.usage}')
+        self.console_logger.debug(f'Parsed data (before review): {data}')
         return data
 
     def setup_logging(self):
