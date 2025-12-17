@@ -10,7 +10,9 @@ from openai import OpenAI
 
 from .. import utils
 from ..client import Client
+from ..client.models import Person, Service
 from ..utils import prompts
+from ..utils.models import ReceiptData
 from . import _mixins
 from .cli import cli
 
@@ -58,26 +60,27 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
 
             self._client = Client(token=self.token)
             assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
-            building = self.get_building(data['business_nif'])
+            building = self.get_building(data.business_nif)
             self.console_logger.info('Building selected: %s - %s', building['id'], building['name'])
             docs = self._client.files(self.receipt_file, is_invoice=True)
             self.console_logger.info('Document created: %s', docs['guid'])
             service = self.get_service()
-            self.console_logger.info('Service selected: %s - %s', service['Id'], service['Name'])
+            self.console_logger.info('Service selected: %s - %s', service.id, service.name)
             person = self.get_person()
-            self.console_logger.info('Person selected: %s - %s', person['CardNumber'], person['Name'])
+            self.console_logger.info('Person selected: %s - %s', person.card_number, person.name)
+            return
             self.contract.multiple_refunds_requests(
-                person['CardNumber'],
-                service['Id'],
-                data['business_nif'],
-                data['invoice_number'],
-                data['total_amount'],
-                data['date'],
+                person.card_number,
+                service.id,
+                data.business_nif,
+                data.invoice_number,
+                data.total_amount,
+                data.date,
                 [docs['guid']],
                 False,
                 False,
                 building['id'],
-                person['Email'],
+                person.email,
             )
         except Exception:
             self.file_logger.exception('Failed to submit with exception')
@@ -108,7 +111,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
 
         message = completion.choices[0].message.content
         self.console_logger.info(f'Parsed receipt details: {message}')
-        data = utils.parse_json_from_model(message)
+        data = ReceiptData(**utils.parse_json_from_model(message))
         self.console_logger.info(f'Parsing token usage: {completion.usage}')
         return data
 
@@ -153,6 +156,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
 
     def get_service(self):
         cands = self.refunds_request_setup['Services']
+        print(cands)
         if self.service:
             ls = self.service.lower()
             cands = [service for service in cands if ls in service['Name'].lower()]
@@ -161,10 +165,10 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             raise click.ClickException(f"No service found matching '{self.service}'")
 
         if len(cands) == 1:
-            return cands[0]
+            return Service(**cands[0])
 
         choices = [f'{i + 1}. {cand["Name"]}' for i, cand in enumerate(cands)]
-        click.echo('Multiple services found:')
+        click.secho('Multiple services found:', fg='red')
         for choice in choices:
             click.echo(choice)
 
@@ -172,7 +176,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             try:
                 selection = click.prompt('Select service number', type=int, default=1)
                 if 1 <= selection <= len(cands):
-                    return cands[selection - 1]
+                    return Service(**cands[selection - 1])
                 else:
                     click.echo(f'Please enter a number between 1 and {len(cands)}')
             except click.Abort:
@@ -187,10 +191,10 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         if not cands:
             raise click.ClickException(f"No person found matching '{self.person}'")
         if len(cands) == 1:
-            return cands[0]
+            return Person(**cands[0])
 
         choices = [f'{i + 1}. {cand["Name"]}' for i, cand in enumerate(cands)]
-        click.echo('Multiple persons found:')
+        click.secho('Multiple persons found:', fg='red')
         for choice in choices:
             click.echo(choice)
 
@@ -198,7 +202,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             try:
                 selection = click.prompt('Select person number', type=int, default=1)
                 if 1 <= selection <= len(cands):
-                    return cands[selection - 1]
+                    return Person(**cands[selection - 1])
                 else:
                     click.echo(f'Please enter a number between 1 and {len(cands)}')
             except click.Abort:
@@ -212,7 +216,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             return cands[0]
 
         choices = [f'{i + 1}. {cand["name"]} address {cand["address"]}' for i, cand in enumerate(cands)]
-        click.echo(f'Multiple buildings found for {nif}:')
+        click.secho(f'Multiple buildings found for {nif}:', fg='red')
         for choice in choices:
             click.echo(choice)
 

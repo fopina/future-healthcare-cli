@@ -4,6 +4,7 @@ requests = "*"
 platformdirs = "*"
 openai = "*"
 pymupdf = "*"
+pydantic = "*"
 
 [dev-packages]
 ruff = "*"
