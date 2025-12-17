@@ -1,4 +1,5 @@
 from functools import cached_property
+from pathlib import Path
 
 import classyclick
 import click
@@ -22,16 +23,35 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
 
     def __call__(self):
         self._client = Client(token=self.token)
-        assert self._client.validate_feature(self.contract, 'REFUNDS_SUBMISSION'), 'Refund submission not available'
-
+        assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
+        NIF = '505956985'
+        building = self.contract.load_buildings(NIF)['buildings']
+        assert len(building) == 1
+        building = building[0]
+        print(building['id'], building['name'])
+        docs = self._client.files(Path('/Users/fopina/Downloads/FR131329-1.pdf'), is_invoice=True)
+        print(docs['guid'])
         service = self.get_service()
         person = self.get_person()
-        print(service)
-        print(person)
+        print(service['Id'], service['Name'])
+        print(person['CardNumber'], person['Name'], person['FiscalNumber'], person['Email'])
+        self.contract.multiple_refunds_requests(
+            person['CardNumber'],
+            service['Id'],
+            NIF,
+            'FR 1/31329',
+            25,
+            '2025-10-11',
+            [docs['guid']],
+            False,
+            False,
+            building['id'],
+            person['Email'],
+        )
 
     @cached_property
     def refunds_request_setup(self):
-        return self._client.refunds_request_setup(self.contract)
+        return self.contract.refunds_request_setup()
 
     def get_service(self):
         cands = self.refunds_request_setup['Services']

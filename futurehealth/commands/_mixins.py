@@ -2,6 +2,7 @@ from functools import cached_property
 
 import click
 
+from ..client import ContractClient
 from ..utils import token_path
 
 
@@ -10,7 +11,7 @@ class ContractMixin:
     def contract(self):
         contract = self._client.contracts()[0]
         assert contract['ContractState'] == 'ACTIVE', 'Contract NOT active'
-        return contract['Token']
+        return ContractClient(self._client, contract['Token'])
 
 
 class TokenMixin:

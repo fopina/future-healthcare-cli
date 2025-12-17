@@ -1,3 +1,4 @@
+from pathlib import Path
 from urllib.parse import quote
 
 import requests
@@ -17,6 +18,7 @@ class Client(requests.Session):
         base_url='https://ws.future-healthcare.net/prd/api/fhc/fhcp/',
         token=None,
         partnership='vic',
+        language='pt-PT',
         *args,
         **kwargs,
     ):
@@ -31,6 +33,7 @@ class Client(requests.Session):
         super().__init__(*args, **kwargs)
         self.base_url = base_url.rstrip('/')
         self.partnership = partnership
+        self.language = language
         self.token = token
 
     def request(self, method, url, *args, _token=False, headers=None, **kwargs):
@@ -50,16 +53,13 @@ class Client(requests.Session):
         if self.base_url and not url.startswith(('http://', 'https://')):
             url = f'{self.base_url}/{url.lstrip("/")}'
             if headers is None:
-                kwargs['headers'] = {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-Partnership': self.partnership,
-                }
-            else:
-                kwargs['headers'] = headers
+                headers = {}
+            headers['X-Partnership'] = self.partnership
+            headers['X-Partnershipapilink'] = self.partnership
+            headers['X-Language'] = self.language
             if _token:
-                kwargs['headers']['Authorization'] = f'Bearer {self.token}'
-        r = super().request(method, url, *args, **kwargs)
+                headers['Authorization'] = f'Bearer {self.token}'
+        r = super().request(method, url, *args, headers=headers, **kwargs)
         if r.status_code != 200:
             try:
                 rd = r.json()
@@ -92,22 +92,111 @@ class Client(requests.Session):
         r = self.get('contracts', _token=True)
         return r['body']['Contracts']
 
-    def validate_feature(self, contract_token: str, feature: str) -> bool:
+    def files(self, path: Path, is_invoice=False):
+        """Upload a file to the files endpoint.
+
+        Args:
+            path: Path to the file to upload
+
+        Returns:
+            dict: Response from the server
+        """
+        if not path.exists():
+            raise exceptions.ClientError(f'File not found: {path}')
+
+        with path.open('rb') as f:
+            files = {'filename': (path.name, f, 'application/pdf')}
+            r = self.post('files', files=files, _token=True, headers={'X-Isinvoice': 'true' if is_invoice else 'false'})
+
+        return r['body']
+
+
+class ContractClient(requests.Session):
+    def __init__(
+        self,
+        client: Client,
+        contract_token: str,
+        *args,
+        **kwargs,
+    ):
+        """Initialize a client for contract-specific endpoints."""
+        super().__init__(*args, **kwargs)
+        self._client = client
+        self._contract_token = contract_token
+
+    def request(self, method: str, url: str, *args, **kwargs):
+        if not url.startswith(('http://', 'https://')):
+            url = f'contracts/{quote(self._contract_token, safe="")}/{url.lstrip("/")}'
+        return self._client.request(method, url, *args, _token=True, **kwargs)
+
+    def validate_feature(self, feature: str) -> bool:
+        """Validate that contract has feature."""
+
+        r = self.post('validate-feature', json={'feature': feature})
+        return r['body']['valid']
+
+    def refunds_request_setup(self) -> bool:
+        """Validate that contract has feature."""
+
+        r = self.get('refunds-requests/setup')
+        return r['body']
+
+    def unified_refunds(self, page_size=5, page=1) -> bool:
+        """Validate that contract has feature."""
+
+        r = self.get(
+            'unified-refunds',
+            params={'page': page, 'pageSize': page_size},
+        )
+        return r['body']
+
+    def load_buildings(self, nif: str) -> bool:
         """Validate that contract has feature."""
 
         r = self.post(
-            f'contracts/{quote(contract_token, safe="")}/validate-feature', _token=True, json={'feature': feature}
+            'refunds-requests/loadBuildings',
+            json={'practiceNif': nif},
         )
-        return r['body']['valid']
-
-    def refunds_request_setup(self, contract_token: str) -> bool:
-        """Validate that contract has feature."""
-
-        r = self.get(f'contracts/{quote(contract_token, safe="")}/refunds-requests/setup', _token=True)
         return r['body']
 
-    def unified_refunds(self, contract_token: str, page_size=5, page=1) -> bool:
+    def multiple_refunds_requests(
+        self,
+        card_number: str,
+        service_id: str,
+        nif: str,
+        receipt: str,
+        total: float,
+        treatment_date: str,
+        docs: list[str],
+        primary_entity: bool,
+        accident: bool,
+        building: str,
+        email: str,
+    ) -> bool:
         """Validate that contract has feature."""
 
-        r = self.get(f'contracts/{quote(contract_token, safe="")}/unified-refunds', _token=True)
-        return r['body']
+        payload = {
+            'refundSubmissions': [
+                {
+                    'CardNumber': card_number,
+                    'ServiceId': service_id,
+                    'NationalPractice': True,
+                    'PracticeFiscalNumber': nif,
+                    'practiceFiscalNumberPrefix': 'PT',
+                    'ReceiptNumber': receipt,
+                    'TotalValue': total,
+                    'DateOfTreatment': treatment_date,
+                    'DocumentGuidList': docs,
+                    'IsPrimaryEntity': primary_entity,
+                    'IsAccident': accident,
+                    'IsInternalNetwork': True,
+                    'MeanOfPayment': 'IBAN',
+                    'PhonePrefix': '+351',
+                    'originId': 6654,
+                    'BuildingId': building,
+                    'Email': email,
+                }
+            ]
+        }
+        # nothing to return - "success" and errors already checked by self.request
+        self.post('multiple-refunds-requests', json=payload)

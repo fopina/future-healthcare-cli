@@ -12,12 +12,12 @@ class Consult(_mixins.ContractMixin, _mixins.TokenMixin):
 
     def __call__(self):
         self._client = Client(token=self.token)
-        assert self._client.validate_feature(self.contract, 'REFUNDS_CONSULT'), 'Refund consult not available'
+        assert self.contract.validate_feature('REFUNDS_CONSULT'), 'Refund consult not available'
         page = 1
         while True:
-            r = self._client.unified_refunds(self.contract, page=page)
+            r = self.contract.unified_refunds(page_size=20, page=page)
             for refund in r['Refunds']:
-                # https://clientes-vic.future-healthcare.net/services/refunds/consult/XXX/detail
+                # web UI details: https://clientes-vic.future-healthcare.net/services/refunds/consult/XXX/detail
                 # XXX = refund["ProcessNr"]
                 received = refund['Claims'][0]['TotalInsurer']
                 if received:
