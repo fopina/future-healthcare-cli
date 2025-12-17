@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ReceiptData(BaseModel):
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra='allow', validate_assignment=True)
 
     business_nif: str
     invoice_number: str
