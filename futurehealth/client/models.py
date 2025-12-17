@@ -1,18 +1,24 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Person(BaseModel):
+    model_config = ConfigDict(extra='allow')
+
     card_number: str = Field(alias='CardNumber')
     name: str = Field(alias='Name')
     email: str = Field(alias='Email')
 
 
 class Service(BaseModel):
+    model_config = ConfigDict(extra='allow')
+
     id: int = Field(alias='Id')
     name: str = Field(alias='Name')
 
 
 class Building(BaseModel):
+    model_config = ConfigDict(extra='allow')
+
     id: str
     name: str
     address: str

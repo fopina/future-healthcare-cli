@@ -68,7 +68,6 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             self.console_logger.info('Service selected: %s - %s', service.id, service.name)
             person = self.get_person()
             self.console_logger.info('Person selected: %s - %s', person.card_number, person.name)
-            return
             self.contract.multiple_refunds_requests(
                 person.card_number,
                 service.id,
@@ -79,7 +78,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
                 [docs['guid']],
                 False,
                 False,
-                building['id'],
+                building.id,
                 person.email,
             )
         except Exception:
