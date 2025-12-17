@@ -78,9 +78,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
 
         self._client = Client(token=self.token)
         assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
-        building = self.contract.load_buildings(data['business_nif'])['buildings']
-        assert len(building) == 1
-        building = building[0]
+        building = self.get_building(data['business_nif'])
         print(building['id'], building['name'])
         docs = self._client.files(self.receipt_file, is_invoice=True)
         print(docs['guid'])
@@ -158,3 +156,25 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
                     click.echo(f'Please enter a number between 1 and {len(cands)}')
             except click.Abort:
                 raise click.ClickException('Person selection cancelled')
+
+    def get_building(self, nif: str):
+        cands = self.contract.load_buildings(nif)['buildings']
+        if not cands:
+            raise click.ClickException(f"No building found matching '{nif}'")
+        if len(cands) == 1:
+            return cands[0]
+
+        choices = [f'{i + 1}. {cand}' for i, cand in enumerate(cands)]
+        click.echo(f'Multiple buildings found for {nif}:')
+        for choice in choices:
+            click.echo(choice)
+
+        while True:
+            try:
+                selection = click.prompt('Select your building/address number', type=int, default=1)
+                if 1 <= selection <= len(cands):
+                    return cands[selection - 1]
+                else:
+                    click.echo(f'Please enter a number between 1 and {len(cands)}')
+            except click.Abort:
+                raise click.ClickException('Building selection cancelled')

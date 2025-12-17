@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 from urllib.parse import quote
 
@@ -192,7 +193,7 @@ class ContractClient(requests.Session):
                     'IsInternalNetwork': True,
                     'MeanOfPayment': 'IBAN',
                     'PhonePrefix': '+351',
-                    'originId': 6654,
+                    'originId': int(random.random() * 9999),
                     'BuildingId': building,
                     'Email': email,
                 }
