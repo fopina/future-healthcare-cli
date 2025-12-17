@@ -21,6 +21,10 @@ def token_path() -> Path:
     return user_config_path(APP_NAME) / TOKEN_FILENAME
 
 
+def logs_path() -> Path:
+    return user_config_path(APP_NAME) / 'logs'
+
+
 def parse_json_from_model(text: str) -> dict:
     try:
         return json.loads(text)
