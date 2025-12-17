@@ -54,7 +54,7 @@ def extract_text_from_pdf(path):
 
 
 def xconvert_from_path(path, dpi=200):
-    """Try to extract text from a PDF"""
+    """Convert PDF pages to compressed images"""
     from PIL import Image
 
     doc = pymupdf.open(path)
@@ -63,6 +63,11 @@ def xconvert_from_path(path, dpi=200):
     for page in doc:
         pix = page.get_pixmap(dpi=dpi)
         img = Image.frombytes('RGB', [pix.width, pix.height], pix.samples)
+        # Resize to maximum 1024x1024 to reduce size - phone photos will be huge...
+        max_size = 1024
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
         images.append(img)
 
     return images

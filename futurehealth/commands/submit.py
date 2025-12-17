@@ -1,4 +1,5 @@
 import logging
+import re
 import shutil
 from datetime import datetime
 from functools import cached_property
@@ -55,13 +56,17 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
 
     def __call__(self):
         self.setup_logging()
+        self._client = Client(token=self.token)
         try:
             data = self.parse_receipt()
 
             self._client = Client(token=self.token)
             assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
-            building = self.get_building(data.business_nif)
+            building, new_nif = self.get_building(data.business_nif)
             self.console_logger.info('Building selected: %s', building)
+            if new_nif != data.business_nif:
+                self.console_logger.info('NIF fixed from %s to %s', data.business_nif, new_nif)
+                data.business_nif = new_nif
             docs = self._client.files(self.receipt_file, is_invoice=True)
             self.console_logger.info('Document created: %s', docs['guid'])
             service = self.get_service()
@@ -98,11 +103,13 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         if prompts.SYSTEM_PROMPT:
             messages.append({'role': 'system', 'content': prompts.SYSTEM_PROMPT})
         if pdf_content[0]['type'] == 'text':
+            self.console_logger.info('Using text model - %s', self.openai_model_text)
             model = self.openai_model_text
             messages.append(
                 {'role': 'user', 'content': [{'type': 'text', 'text': prompts.USER_TEXT_PROMPT}] + pdf_content}
             )
         else:
+            self.console_logger.info('Using vision model - %s', self.openai_model_vision)
             model = self.openai_model_vision
             messages.append(
                 {'role': 'user', 'content': [{'type': 'text', 'text': prompts.USER_VISION_PROMPT}] + pdf_content}
@@ -112,7 +119,16 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         message = completion.choices[0].message.content
         self.console_logger.info(f'Parsed receipt details: {message}')
         data = ReceiptData(**utils.parse_json_from_model(message))
+        # convert date - not done in LLM as testing shown issues with proper format conversion
+        # it's either YEAR MM DD or DD MM YEAR (no US format), easy to detect
+        date_parts = re.findall(r'\b(\d+)\b', data.date)
+        if len(date_parts[2]) == 4:
+            date_parts.reverse()
+        elif len(date_parts[0]) != 4:
+            raise click.ClickException(f'{data.date} does not seem to contain full year')
+        data.date = '-'.join(date_parts)
         self.console_logger.info(f'Parsing token usage: {completion.usage}')
+        self.console_logger.info(f'Parsed/fixed data: {data}')
         return data
 
     def setup_logging(self):
@@ -207,12 +223,18 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             except click.Abort:
                 raise click.ClickException('Person selection cancelled')
 
-    def get_building(self, nif: str) -> Building:
-        cands = self.contract.load_buildings(nif)
-        if not cands:
-            raise click.ClickException(f"No building found matching '{nif}'")
+    def get_building(self, nif: str) -> tuple[Building, str]:
+        while True:
+            if not utils.validate_nif(nif):
+                nif = click.prompt(f'{nif} is not a valid NIF, enter correct one')
+                continue
+            cands = self.contract.load_buildings(nif)
+            if cands:
+                break
+            nif = click.prompt(f'{nif} has no buildings, enter correct one')
+
         if len(cands) == 1:
-            return cands[0]
+            return cands[0], nif
 
         choices = [f'{i + 1}. {cand.name} address {cand.address}' for i, cand in enumerate(cands)]
         click.secho(f'Multiple buildings found for {nif}:', fg='red')
@@ -223,7 +245,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             try:
                 selection = click.prompt('Select your building/address number', type=int, default=1)
                 if 1 <= selection <= len(cands):
-                    return cands[selection - 1]
+                    return cands[selection - 1], nif
                 else:
                     click.echo(f'Please enter a number between 1 and {len(cands)}')
             except click.Abort:
