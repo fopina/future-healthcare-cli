@@ -8,5 +8,14 @@ class Person(BaseModel):
 
 
 class Service(BaseModel):
-    id: str = Field(alias='Id')
+    id: int = Field(alias='Id')
     name: str = Field(alias='Name')
+
+
+class Building(BaseModel):
+    id: str
+    name: str
+    address: str
+
+    def __str__(self):
+        return f'{self.id} - {self.name}'

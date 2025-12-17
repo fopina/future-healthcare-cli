@@ -10,7 +10,7 @@ from openai import OpenAI
 
 from .. import utils
 from ..client import Client
-from ..client.models import Person, Service
+from ..client.models import Building
 from ..utils import prompts
 from ..utils.models import ReceiptData
 from . import _mixins
@@ -61,7 +61,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             self._client = Client(token=self.token)
             assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
             building = self.get_building(data.business_nif)
-            self.console_logger.info('Building selected: %s - %s', building['id'], building['name'])
+            self.console_logger.info('Building selected: %s', building)
             docs = self._client.files(self.receipt_file, is_invoice=True)
             self.console_logger.info('Document created: %s', docs['guid'])
             service = self.get_service()
@@ -85,6 +85,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         except Exception:
             self.file_logger.exception('Failed to submit with exception')
             raise
+        self.console_logger.info('Submission completed')
 
     def parse_receipt(self):
         pdf_content = utils.read_pdf(self.receipt_file, force_vision=self.force_vision, dpi=self.vision_dpi)
@@ -155,19 +156,18 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         return self.contract.refunds_request_setup()
 
     def get_service(self):
-        cands = self.refunds_request_setup['Services']
-        print(cands)
+        cands = self.refunds_request_setup.services
         if self.service:
             ls = self.service.lower()
-            cands = [service for service in cands if ls in service['Name'].lower()]
+            cands = [service for service in cands if ls in service.name.lower()]
 
         if not cands:
             raise click.ClickException(f"No service found matching '{self.service}'")
 
         if len(cands) == 1:
-            return Service(**cands[0])
+            return cands[0]
 
-        choices = [f'{i + 1}. {cand["Name"]}' for i, cand in enumerate(cands)]
+        choices = [f'{i + 1}. {cand.name}' for i, cand in enumerate(cands)]
         click.secho('Multiple services found:', fg='red')
         for choice in choices:
             click.echo(choice)
@@ -176,24 +176,24 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             try:
                 selection = click.prompt('Select service number', type=int, default=1)
                 if 1 <= selection <= len(cands):
-                    return Service(**cands[selection - 1])
+                    return cands[selection - 1]
                 else:
                     click.echo(f'Please enter a number between 1 and {len(cands)}')
             except click.Abort:
                 raise click.ClickException('Service selection cancelled')
 
     def get_person(self):
-        cands = self.refunds_request_setup['InsuredPersons']
+        cands = self.refunds_request_setup.insured_persons
         if self.person:
             lp = self.person.lower()
-            cands = [person for person in cands if lp in person['Name'].lower()]
+            cands = [person for person in cands if lp in person.name.lower()]
 
         if not cands:
             raise click.ClickException(f"No person found matching '{self.person}'")
         if len(cands) == 1:
-            return Person(**cands[0])
+            return cands[0]
 
-        choices = [f'{i + 1}. {cand["Name"]}' for i, cand in enumerate(cands)]
+        choices = [f'{i + 1}. {cand.name}' for i, cand in enumerate(cands)]
         click.secho('Multiple persons found:', fg='red')
         for choice in choices:
             click.echo(choice)
@@ -202,20 +202,20 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             try:
                 selection = click.prompt('Select person number', type=int, default=1)
                 if 1 <= selection <= len(cands):
-                    return Person(**cands[selection - 1])
+                    return cands[selection - 1]
                 else:
                     click.echo(f'Please enter a number between 1 and {len(cands)}')
             except click.Abort:
                 raise click.ClickException('Person selection cancelled')
 
-    def get_building(self, nif: str):
-        cands = self.contract.load_buildings(nif)['buildings']
+    def get_building(self, nif: str) -> Building:
+        cands = self.contract.load_buildings(nif)
         if not cands:
             raise click.ClickException(f"No building found matching '{nif}'")
         if len(cands) == 1:
             return cands[0]
 
-        choices = [f'{i + 1}. {cand["name"]} address {cand["address"]}' for i, cand in enumerate(cands)]
+        choices = [f'{i + 1}. {cand.name} address {cand.address}' for i, cand in enumerate(cands)]
         click.secho(f'Multiple buildings found for {nif}:', fg='red')
         for choice in choices:
             click.echo(choice)
