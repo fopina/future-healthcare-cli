@@ -6,6 +6,7 @@ on:
       - dev
       - dev/*
       - dev-*
+  workflow_dispatch:
 
 jobs:
   test_and_publish:
