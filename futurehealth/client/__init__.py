@@ -65,7 +65,9 @@ class Client(requests.Session):
         if r.status_code != 200:
             try:
                 rd = r.json()
-                exc = exceptions.ClientError(f'Contracts - {rd["resultMessage"]} ({r.status_code})')
+                exc = exceptions.ClientError(
+                    f'Contracts - {rd["resultMessage"]} - {rd["resultCodeDetail"]} ({r.status_code})'
+                )
             except Exception:
                 exc = exceptions.ClientError('Unexpected error')
             raise exc

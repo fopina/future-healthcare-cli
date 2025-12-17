@@ -9,8 +9,7 @@ import classyclick
 import click
 from openai import OpenAI
 
-from .. import utils
-from ..client import Client
+from .. import client, utils
 from ..client.models import Building
 from ..utils import prompts
 from ..utils.models import ReceiptData
@@ -56,11 +55,10 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
 
     def __call__(self):
         self.setup_logging()
-        self._client = Client(token=self.token)
         try:
             data = self.parse_receipt()
 
-            self._client = Client(token=self.token)
+            self._client = client.Client(token=self.token)
             assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
             building, new_nif = self.get_building(data.business_nif)
             self.console_logger.info('Building selected: %s', building)
@@ -86,6 +84,9 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
                 building.id,
                 person.email,
             )
+        except client.exceptions.ClientError as e:
+            self.file_logger.exception('Failed to submit with exception')
+            raise click.ClickException(str(e))
         except Exception:
             self.file_logger.exception('Failed to submit with exception')
             raise
