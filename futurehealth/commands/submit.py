@@ -32,14 +32,15 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
     # same model used for both as it is indeed currently the cheapest for anything in venice.ai
     openai_model_vision: str = classyclick.Option(default='google-gemma-3-27b-it', help='Model to use when receipts are in image format or scanned PDF')
     openai_model_text: str = classyclick.Option(default='google-gemma-3-27b-it', help='Model to use when receipts are in text-based PDF')
+    force_vision: bool = classyclick.Option(help='If receipt is not an image, convert it anyway - only useful if Vision model is cheaper or performs better...')
+    vision_dpi: int = classyclick.Option(default=200, help='When converting PDF to image, use this DPI. Higher DPI should yield higher cost but more accuracy.')
 
     _client = None
 
     def __call__(self):
         # Path to the PDF file to analyze
         pdf_path = Path('/Users/fopina/Downloads/FR131329-1.pdf')
-        # pdf_path = Path('/Users/fopina/Desktop/fr_pic.png')
-        pdf_content = utils.read_pdf(pdf_path, force_vision=True, dpi=100)
+        pdf_content = utils.read_pdf(pdf_path, force_vision=self.force_vision, dpi=self.vision_dpi)
 
         client = OpenAI(
             api_key=self.openai_api_key,
@@ -77,7 +78,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         completion = client.chat.completions.create(
             model=model,
             messages=messages,
-            max_completion_tokens=100
+            max_completion_tokens=500
         )
 
         for choice in completion.choices:
