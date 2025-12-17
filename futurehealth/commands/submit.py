@@ -5,15 +5,17 @@ import classyclick
 import click
 from openai import OpenAI
 
+from .. import utils
 from ..client import Client
+from ..utils import prompts
 from . import _mixins
 from .cli import cli
-from .. import utils
-from ..utils import prompts
 
 
 @classyclick.command(group=cli)
 class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
+    receipt_file: Path = classyclick.Argument()
+
     person: str = classyclick.Option(
         '-p', help='Name of the insured person. If not specified or multiple matches, it will be prompted interactively'
     )
@@ -26,21 +28,28 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
     )
     openai_api_url: str = classyclick.Option(
         default='https://api.venice.ai/api/v1',
-        help='API base url of the OpenAI-compatible service to read the receipts'
+        help='API base url of the OpenAI-compatible service to read the receipts',
     )
     # TODO: currently, in venice.ai, this same prompt is cheaper with Vision than with text???
     # same model used for both as it is indeed currently the cheapest for anything in venice.ai
-    openai_model_vision: str = classyclick.Option(default='google-gemma-3-27b-it', help='Model to use when receipts are in image format or scanned PDF')
-    openai_model_text: str = classyclick.Option(default='google-gemma-3-27b-it', help='Model to use when receipts are in text-based PDF')
-    force_vision: bool = classyclick.Option(help='If receipt is not an image, convert it anyway - only useful if Vision model is cheaper or performs better...')
-    vision_dpi: int = classyclick.Option(default=200, help='When converting PDF to image, use this DPI. Higher DPI should yield higher cost but more accuracy.')
+    openai_model_vision: str = classyclick.Option(
+        default='google-gemma-3-27b-it', help='Model to use when receipts are in image format or scanned PDF'
+    )
+    openai_model_text: str = classyclick.Option(
+        default='google-gemma-3-27b-it', help='Model to use when receipts are in text-based PDF'
+    )
+    force_vision: bool = classyclick.Option(
+        help='If receipt is not an image, convert it anyway - only useful if Vision model is cheaper or performs better...'
+    )
+    vision_dpi: int = classyclick.Option(
+        default=200,
+        help='When converting PDF to image, use this DPI. Higher DPI should yield higher cost but more accuracy.',
+    )
 
     _client = None
 
     def __call__(self):
-        # Path to the PDF file to analyze
-        pdf_path = Path('/Users/fopina/Downloads/FR131329-1.pdf')
-        pdf_content = utils.read_pdf(pdf_path, force_vision=self.force_vision, dpi=self.vision_dpi)
+        pdf_content = utils.read_pdf(self.receipt_file, force_vision=self.force_vision, dpi=self.vision_dpi)
 
         client = OpenAI(
             api_key=self.openai_api_key,
@@ -49,58 +58,31 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
 
         messages = []
         if prompts.SYSTEM_PROMPT:
-            messages.append({
-                "role": "system",
-                "content": prompts.SYSTEM_PROMPT
-            })
+            messages.append({'role': 'system', 'content': prompts.SYSTEM_PROMPT})
         if pdf_content[0]['type'] == 'text':
             model = self.openai_model_text
-            messages.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompts.USER_TEXT_PROMPT
-                    }
-                ] + pdf_content
-            })
+            messages.append(
+                {'role': 'user', 'content': [{'type': 'text', 'text': prompts.USER_TEXT_PROMPT}] + pdf_content}
+            )
         else:
             model = self.openai_model_vision
-            messages.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompts.USER_VISION_PROMPT
-                    }
-                ] + pdf_content
-            })
-        completion = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_completion_tokens=500
-        )
+            messages.append(
+                {'role': 'user', 'content': [{'type': 'text', 'text': prompts.USER_VISION_PROMPT}] + pdf_content}
+            )
+        completion = client.chat.completions.create(model=model, messages=messages, max_completion_tokens=500)
 
-        for choice in completion.choices:
-            print(choice.message.content.strip())
-        print(completion.usage)
-        return
-        print(f"Extracted NIF: {nif_response}")
+        message = completion.choices[0].message.content
+        print(f'Details: {message}')
+        data = utils.parse_json_from_model(message)
+        print(f'Usage: {completion.usage}')
 
-        # Validate NIF format (should be 9 digits)
-        if not nif_response.isdigit() or len(nif_response) != 9:
-            raise click.ClickException(f"Invalid NIF extracted: {nif_response}")
-
-        NIF = nif_response
-        return
         self._client = Client(token=self.token)
         assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
-        NIF = '505956985'
-        building = self.contract.load_buildings(NIF)['buildings']
+        building = self.contract.load_buildings(data['business_nif'])['buildings']
         assert len(building) == 1
         building = building[0]
         print(building['id'], building['name'])
-        docs = self._client.files(Path('/Users/fopina/Downloads/FR131329-1.pdf'), is_invoice=True)
+        docs = self._client.files(self.receipt_file, is_invoice=True)
         print(docs['guid'])
         service = self.get_service()
         person = self.get_person()
@@ -109,10 +91,10 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
         self.contract.multiple_refunds_requests(
             person['CardNumber'],
             service['Id'],
-            NIF,
-            'FR 1/31329',
-            25,
-            '2025-10-11',
+            data['business_nif'],
+            data['invoice_number'],
+            data['total_amount'],
+            data['date'],
             [docs['guid']],
             False,
             False,
