@@ -1,6 +1,9 @@
+import base64
+import mimetypes
 from pathlib import Path
 
 from platformdirs import user_config_path
+from .pdf import read_pdf
 
 APP_NAME = 'future-healthcare-cli'
 CONFIG_FILENAME = 'config.toml'
@@ -13,3 +16,4 @@ def config_path() -> Path:
 
 def token_path() -> Path:
     return user_config_path(APP_NAME) / TOKEN_FILENAME
+

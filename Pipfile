@@ -2,6 +2,9 @@
 classyclick = "*"
 requests = "*"
 platformdirs = "*"
+openai = "*"
+pymupdf = "*"
+pdf2image = "*"
 
 [dev-packages]
 ruff = "*"
