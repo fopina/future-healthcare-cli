@@ -19,6 +19,6 @@ class Login:
             raise click.ClickException(e)
 
         path = token_path()
-        path.parent.mkdir(parents=True, exist_ok=True, mode=700)
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         path.write_text(r['body']['token'])
         print('Login succeeded')
