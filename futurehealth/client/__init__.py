@@ -1,3 +1,4 @@
+import mimetypes
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,6 +60,9 @@ class Client(requests.Session):
             headers['X-Partnership'] = self.partnership
             headers['X-Partnershipapilink'] = self.partnership
             headers['X-Language'] = self.language
+            headers['User-Agent'] = (
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:145.0) Gecko/20100101 Firefox/145.0'
+            )
             if _token:
                 headers['Authorization'] = f'Bearer {self.token}'
         r = super().request(method, url, *args, headers=headers, **kwargs)
@@ -108,8 +112,9 @@ class Client(requests.Session):
         if not path.exists():
             raise exceptions.ClientError(f'File not found: {path}')
 
+        mime_type, _ = mimetypes.guess_type(path)
         with path.open('rb') as f:
-            files = {'filename': (path.name, f, 'application/pdf')}
+            files = {'filename': (path.name, f, mime_type)}
             r = self.post('files', files=files, _token=True, headers={'X-Isinvoice': 'true' if is_invoice else 'false'})
 
         return r['body']
@@ -195,7 +200,7 @@ class ContractClient(requests.Session):
             'refundSubmissions': [
                 {
                     'CardNumber': card_number,
-                    'ServiceId': service_id,
+                    'ServiceId': str(service_id),
                     'NationalPractice': True,
                     'PracticeFiscalNumber': nif,
                     'practiceFiscalNumberPrefix': 'PT',
