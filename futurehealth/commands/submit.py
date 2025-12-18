@@ -78,7 +78,7 @@ class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
             docs = []
             docs.append(self._client.files(self.receipt_file, is_invoice=True)['guid'])
             self.console_logger.info('Document created: %s', docs[-1])
-            for other in self.other_attachments:
+            for other in self.other_attachments or []:
                 docs.append(self._client.files(other)['guid'])
                 self.console_logger.info('Document created: %s', docs[-1])
 
