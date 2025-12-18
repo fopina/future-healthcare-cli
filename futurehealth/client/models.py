@@ -14,6 +14,8 @@ class Service(BaseModel):
 
     id: int = Field(alias='Id')
     name: str = Field(alias='Name')
+    mantory_invoice_file: bool = Field(alias='IsMandatoryInvoiceFile')
+    mantory_additional_file: bool = Field(alias='IsMandatoryAditionalFile')
 
 
 class Building(BaseModel):
