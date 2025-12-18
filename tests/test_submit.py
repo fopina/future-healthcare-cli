@@ -91,6 +91,7 @@ class TestSubmitCommand:
         submit.contract = mock_contract
         submit.file_logger = MagicMock()
         submit.console_logger = MagicMock()
+        submit.token = 'test_token'  # Mock token to avoid file access
 
         # Execute
         submit()
@@ -137,6 +138,7 @@ class TestSubmitCommand:
         submit.contract = mock_contract
         submit.file_logger = MagicMock()
         submit.console_logger = MagicMock()
+        submit.token = 'test_token'  # Mock token to avoid file access
 
         with pytest.raises(AssertionError):
             submit()
