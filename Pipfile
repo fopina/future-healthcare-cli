@@ -5,6 +5,7 @@ platformdirs = "*"
 openai = "*"
 pymupdf = "*"
 pydantic = "*"
+pillow = "*"
 
 [dev-packages]
 ruff = "*"
