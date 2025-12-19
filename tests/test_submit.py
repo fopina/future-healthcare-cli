@@ -1,8 +1,6 @@
+import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import unittest
-
-import pytest
 
 from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands.submit import Submit

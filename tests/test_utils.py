@@ -1,8 +1,6 @@
 import json
-from unittest.mock import MagicMock, patch
 import unittest
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from futurehealth.utils import parse_json_from_model, validate_nif
 from futurehealth.utils.pdf import detect_file_type, extract_text_from_pdf, read_pdf, xconvert_from_path
