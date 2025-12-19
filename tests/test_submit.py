@@ -1,14 +1,13 @@
+import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands.submit import Submit
 from futurehealth.utils.models import ReceiptData
 
 
-class TestSubmitCommand:
+class TestSubmitCommand(unittest.TestCase):
     """Test cases for the Submit command."""
 
     def test_submit_initialization(self):
@@ -26,16 +25,16 @@ class TestSubmitCommand:
             debug=True,
         )
 
-        assert submit.receipt_file == Path('test.pdf')
-        assert submit.person == 'John'
-        assert submit.service == 'Medical'
-        assert submit.openai_api_key == 'test_key'
-        assert submit.openai_api_url == 'https://test.api'
-        assert submit.openai_model_vision == 'test-vision'
-        assert submit.openai_model_text == 'test-text'
-        assert submit.force_vision is False
-        assert submit.vision_dpi == 200
-        assert submit.debug is True
+        self.assertEqual(submit.receipt_file, Path('test.pdf'))
+        self.assertEqual(submit.person, 'John')
+        self.assertEqual(submit.service, 'Medical')
+        self.assertEqual(submit.openai_api_key, 'test_key')
+        self.assertEqual(submit.openai_api_url, 'https://test.api')
+        self.assertEqual(submit.openai_model_vision, 'test-vision')
+        self.assertEqual(submit.openai_model_text, 'test-text')
+        self.assertFalse(submit.force_vision)
+        self.assertEqual(submit.vision_dpi, 200)
+        self.assertTrue(submit.debug)
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.Submit.parse_receipt')
@@ -140,7 +139,7 @@ class TestSubmitCommand:
         submit.console_logger = MagicMock()
         submit.token = 'test_token'  # Mock token to avoid file access
 
-        with pytest.raises(AssertionError):
+        with self.assertRaises(AssertionError):
             submit()
 
     @patch('futurehealth.commands.submit.utils.read_pdf')
@@ -171,18 +170,18 @@ class TestSubmitCommand:
 
         result = submit.parse_receipt()
 
-        assert isinstance(result, ReceiptData)
-        assert result.business_nif == '123456789'
-        assert result.personal_nif == '987654321'
-        assert result.invoice_number == 'INV001'
-        assert result.total_amount == 100.50
-        assert result.date == '2023-01-01'  # Should be reformatted
+        self.assertIsInstance(result, ReceiptData)
+        self.assertEqual(result.business_nif, '123456789')
+        self.assertEqual(result.personal_nif, '987654321')
+        self.assertEqual(result.invoice_number, 'INV001')
+        self.assertEqual(result.total_amount, 100.50)
+        self.assertEqual(result.date, '2023-01-01')  # Should be reformatted
 
         # Verify OpenAI call
         mock_client.chat.completions.create.assert_called_once()
         call_args = mock_client.chat.completions.create.call_args
-        assert call_args[1]['model'] == 'test-model'
-        assert len(call_args[1]['messages']) == 2  # system + user
+        self.assertEqual(call_args[1]['model'], 'test-model')
+        self.assertEqual(len(call_args[1]['messages']), 2)  # system + user
 
     @patch('futurehealth.commands.submit.utils.read_pdf')
     @patch('futurehealth.commands.submit.OpenAI')
@@ -213,12 +212,12 @@ class TestSubmitCommand:
 
         result = submit.parse_receipt()
 
-        assert isinstance(result, ReceiptData)
-        assert result.business_nif == '123456789'
+        self.assertIsInstance(result, ReceiptData)
+        self.assertEqual(result.business_nif, '123456789')
 
         # Verify vision model was used
         call_args = mock_client.chat.completions.create.call_args
-        assert call_args[1]['model'] == 'vision-model'
+        self.assertEqual(call_args[1]['model'], 'vision-model')
 
     def test_get_service_single_match(self):
         """Test get_service with single match."""
@@ -234,8 +233,8 @@ class TestSubmitCommand:
 
         result = submit.get_service()
 
-        assert result.id == 1
-        assert result.name == 'Medical Service'
+        self.assertEqual(result.id, 1)
+        self.assertEqual(result.name, 'Medical Service')
 
     def test_get_service_multiple_matches_interactive(self):
         """Test get_service with multiple matches - interactive selection."""
@@ -252,8 +251,8 @@ class TestSubmitCommand:
         with patch('click.prompt', return_value=1):
             result = submit.get_service()
 
-        assert result.id == 1
-        assert result.name == 'Medical Service A'
+        self.assertEqual(result.id, 1)
+        self.assertEqual(result.name, 'Medical Service A')
 
     def test_get_service_no_matches(self):
         """Test get_service with no matches."""
@@ -267,7 +266,7 @@ class TestSubmitCommand:
         ]
         submit.refunds_request_setup = mock_setup
 
-        with pytest.raises(Exception):  # ClickException
+        with self.assertRaises(Exception):  # ClickException
             submit.get_service()
 
     def test_get_person_single_match(self):
@@ -281,8 +280,8 @@ class TestSubmitCommand:
 
         result = submit.get_person()
 
-        assert result.card_number == '123456789'
-        assert result.name == 'John Doe'
+        self.assertEqual(result.card_number, '123456789')
+        self.assertEqual(result.name, 'John Doe')
 
     def test_get_person_multiple_matches_interactive(self):
         """Test get_person with multiple matches - interactive selection."""
@@ -299,8 +298,8 @@ class TestSubmitCommand:
         with patch('click.prompt', return_value=2):
             result = submit.get_person()
 
-        assert result.card_number == '987654321'
-        assert result.name == 'Jane Smith'
+        self.assertEqual(result.card_number, '987654321')
+        self.assertEqual(result.name, 'Jane Smith')
 
     def test_get_building_single_match(self):
         """Test get_building with single match."""
@@ -313,9 +312,9 @@ class TestSubmitCommand:
 
         result, nif = submit.get_building('123456789')
 
-        assert result.id == 'b1'
-        assert result.name == 'Hospital A'
-        assert nif == '123456789'
+        self.assertEqual(result.id, 'b1')
+        self.assertEqual(result.name, 'Hospital A')
+        self.assertEqual(nif, '123456789')
 
     def test_get_building_multiple_matches_interactive(self):
         """Test get_building with multiple matches - interactive selection."""
@@ -332,8 +331,8 @@ class TestSubmitCommand:
         with patch('click.prompt', return_value=1):
             result, nif = submit.get_building('123456789')
 
-        assert result.id == 'b1'
-        assert result.name == 'Hospital A'
+        self.assertEqual(result.id, 'b1')
+        self.assertEqual(result.name, 'Hospital A')
 
     def test_get_building_invalid_nif(self):
         """Test get_building with invalid NIF."""
@@ -346,8 +345,8 @@ class TestSubmitCommand:
             result, nif = submit.get_building('invalid')
 
         mock_prompt.assert_called_once()
-        assert result.id == 'x'
-        assert nif == '123456789'
+        self.assertEqual(result.id, 'x')
+        self.assertEqual(nif, '123456789')
 
     def test_get_building_no_buildings(self):
         """Test get_building when no buildings found for NIF."""
@@ -362,9 +361,9 @@ class TestSubmitCommand:
             result, nif = submit.get_building('123456789')
 
         # Should prompt for new NIF
-        assert mock_prompt.call_count == 1
-        assert result.id == 'x'
-        assert nif == '505956985'
+        self.assertEqual(mock_prompt.call_count, 1)
+        self.assertEqual(result.id, 'x')
+        self.assertEqual(nif, '505956985')
 
     @patch('futurehealth.utils.models.ReceiptData.model_copy')
     def test_review_data_update_field(self, mock_model_copy):
@@ -385,7 +384,7 @@ class TestSubmitCommand:
 
             submit.review_data(data)
 
-        assert data.invoice_number == 'INV002'
+        self.assertEqual(data.invoice_number, 'INV002')
 
     def test_review_data_all_good(self):
         """Test review_data when user selects 'All good'."""
