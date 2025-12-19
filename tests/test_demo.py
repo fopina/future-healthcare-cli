@@ -22,7 +22,7 @@ class Test(unittest.TestCase):
         self.assertEqual(b.total_amount, 12.0)
 
 
-class TestModels:
+class TestModels(unittest.TestCase):
     def test_receipt_data_creation(self):
         data = ReceiptData(
             business_nif='123456789',
@@ -31,11 +31,11 @@ class TestModels:
             total_amount=100.50,
             date='2023-01-01',
         )
-        assert data.business_nif == '123456789'
-        assert data.personal_nif == '987654321'
-        assert data.invoice_number == 'INV001'
-        assert data.total_amount == 100.50
-        assert data.date == '2023-01-01'
+        self.assertEqual(data.business_nif, '123456789')
+        self.assertEqual(data.personal_nif, '987654321')
+        self.assertEqual(data.invoice_number, 'INV001')
+        self.assertEqual(data.total_amount, 100.50)
+        self.assertEqual(data.date, '2023-01-01')
 
     def test_receipt_data_type_conversion(self):
         data = ReceiptData(
@@ -45,8 +45,8 @@ class TestModels:
             total_amount='100.50',  # String should convert to float
             date='2023-01-01',
         )
-        assert isinstance(data.total_amount, float)
-        assert data.total_amount == 100.5
+        self.assertIsInstance(data.total_amount, float)
+        self.assertEqual(data.total_amount, 100.5)
 
     def test_receipt_data_extra_fields(self):
         data = ReceiptData(
@@ -57,11 +57,11 @@ class TestModels:
             date='2023-01-01',
             extra_field='extra_value',  # Should be allowed due to extra='allow'
         )
-        assert hasattr(data, 'extra_field')
-        assert data.extra_field == 'extra_value'
+        self.assertTrue(hasattr(data, 'extra_field'))
+        self.assertEqual(data.extra_field, 'extra_value')
 
     def test_receipt_data_validation_error(self):
-        with pytest.raises(Exception):  # Pydantic validation error
+        with self.assertRaises(Exception):  # Pydantic validation error
             ReceiptData(
                 business_nif='123456789',
                 personal_nif='987654321',
@@ -73,43 +73,43 @@ class TestModels:
     def test_person_model(self):
         # Use alias field names for creation
         person = Person(CardNumber='123456789', Name='John Doe', Email='john@example.com')
-        assert person.card_number == '123456789'
-        assert person.name == 'John Doe'
-        assert person.email == 'john@example.com'
+        self.assertEqual(person.card_number, '123456789')
+        self.assertEqual(person.name, 'John Doe')
+        self.assertEqual(person.email, 'john@example.com')
 
     def test_person_with_aliases(self):
         # Test that JSON with original field names works
         data = {'CardNumber': '123456789', 'Name': 'John Doe', 'Email': 'john@example.com'}
         person = Person(**data)
-        assert person.card_number == '123456789'
-        assert person.name == 'John Doe'
-        assert person.email == 'john@example.com'
+        self.assertEqual(person.card_number, '123456789')
+        self.assertEqual(person.name, 'John Doe')
+        self.assertEqual(person.email, 'john@example.com')
 
     def test_service_model(self):
         # Use alias field names for creation
         service = Service(Id=1, Name='Medical Service', IsMandatoryInvoiceFile=True, IsMandatoryAditionalFile=False)
-        assert service.id == 1
-        assert service.name == 'Medical Service'
-        assert service.mantory_invoice_file is True
-        assert service.mantory_additional_file is False
+        self.assertEqual(service.id, 1)
+        self.assertEqual(service.name, 'Medical Service')
+        self.assertTrue(service.mantory_invoice_file)
+        self.assertFalse(service.mantory_additional_file)
 
     def test_service_with_aliases(self):
         data = {'Id': 1, 'Name': 'Medical Service', 'IsMandatoryInvoiceFile': True, 'IsMandatoryAditionalFile': False}
         service = Service(**data)
-        assert service.id == 1
-        assert service.name == 'Medical Service'
-        assert service.mantory_invoice_file is True
-        assert service.mantory_additional_file is False
+        self.assertEqual(service.id, 1)
+        self.assertEqual(service.name, 'Medical Service')
+        self.assertTrue(service.mantory_invoice_file)
+        self.assertFalse(service.mantory_additional_file)
 
     def test_building_model(self):
         building = Building(id='123', name='Hospital A', address='123 Main St')
-        assert building.id == '123'
-        assert building.name == 'Hospital A'
-        assert building.address == '123 Main St'
-        assert str(building) == '123 - Hospital A'
+        self.assertEqual(building.id, '123')
+        self.assertEqual(building.name, 'Hospital A')
+        self.assertEqual(building.address, '123 Main St')
+        self.assertEqual(str(building), '123 - Hospital A')
 
 
-class TestMixins:
+class TestMixins(unittest.TestCase):
     def test_token_mixin_with_token_file(self):
         """Test TokenMixin when token file exists."""
         with patch('futurehealth.commands._mixins.token_path') as mock_token_path:
@@ -118,7 +118,7 @@ class TestMixins:
             mock_token_path.return_value = mock_path
 
             mixin = TokenMixin()
-            assert mixin.token == 'test_token'
+            self.assertEqual(mixin.token, 'test_token')
 
     def test_token_mixin_without_token_file(self):
         """Test TokenMixin when token file doesn't exist."""
@@ -128,7 +128,7 @@ class TestMixins:
             mock_token_path.return_value = mock_path
 
             mixin = TokenMixin()
-            with pytest.raises(Exception):  # Should raise ClickException
+            with self.assertRaises(Exception):  # Should raise ClickException
                 _ = mixin.token
 
     @patch('futurehealth.commands._mixins.ContractClient')
@@ -143,7 +143,7 @@ class TestMixins:
 
         contract = mixin.contract
 
-        assert contract == 'contract_client_instance'
+        self.assertEqual(contract, 'contract_client_instance')
         mock_contract_client.assert_called_once_with(mock_client, 'contract_token')
 
     def test_contract_mixin_inactive_contract(self):
@@ -154,11 +154,11 @@ class TestMixins:
         mixin = ContractMixin()
         mixin._client = mock_client
 
-        with pytest.raises(AssertionError):
+        with self.assertRaises(AssertionError):
             _ = mixin.contract
 
 
-class TestCommands:
+class TestCommands(unittest.TestCase):
     @patch('futurehealth.commands.login.token_path')
     @patch('futurehealth.client.Client')
     def test_login_success(self, mock_client_class, mock_token_path):
@@ -184,49 +184,49 @@ class TestCommands:
 
         cmd = login.Login(username='user', password='wrong')
 
-        with pytest.raises(Exception):  # Should raise ClickException
+        with self.assertRaises(Exception):  # Should raise ClickException
             cmd()
 
 
-class TestPrompts:
+class TestPrompts(unittest.TestCase):
     def test_system_prompt_exists(self):
         """Test that SYSTEM_PROMPT is defined and not empty."""
-        assert hasattr(prompts, 'SYSTEM_PROMPT')
-        assert isinstance(prompts.SYSTEM_PROMPT, str)
-        assert len(prompts.SYSTEM_PROMPT) > 0
+        self.assertTrue(hasattr(prompts, 'SYSTEM_PROMPT'))
+        self.assertIsInstance(prompts.SYSTEM_PROMPT, str)
+        self.assertGreater(len(prompts.SYSTEM_PROMPT), 0)
 
     def test_user_text_prompt_exists(self):
         """Test that USER_TEXT_PROMPT is defined and not empty."""
-        assert hasattr(prompts, 'USER_TEXT_PROMPT')
-        assert isinstance(prompts.USER_TEXT_PROMPT, str)
-        assert len(prompts.USER_TEXT_PROMPT) > 0
+        self.assertTrue(hasattr(prompts, 'USER_TEXT_PROMPT'))
+        self.assertIsInstance(prompts.USER_TEXT_PROMPT, str)
+        self.assertGreater(len(prompts.USER_TEXT_PROMPT), 0)
 
     def test_user_vision_prompt_exists(self):
         """Test that USER_VISION_PROMPT is defined and not empty."""
-        assert hasattr(prompts, 'USER_VISION_PROMPT')
-        assert isinstance(prompts.USER_VISION_PROMPT, str)
-        assert len(prompts.USER_VISION_PROMPT) > 0
+        self.assertTrue(hasattr(prompts, 'USER_VISION_PROMPT'))
+        self.assertIsInstance(prompts.USER_VISION_PROMPT, str)
+        self.assertGreater(len(prompts.USER_VISION_PROMPT), 0)
 
     def test_prompts_contain_key_instructions(self):
         """Test that prompts contain expected key instructions."""
-        assert 'business_nif' in prompts.USER_TEXT_PROMPT
-        assert 'personal_nif' in prompts.USER_TEXT_PROMPT
-        assert 'invoice_number' in prompts.USER_TEXT_PROMPT
-        assert 'total_amount' in prompts.USER_TEXT_PROMPT
-        assert 'date' in prompts.USER_TEXT_PROMPT
+        self.assertIn('business_nif', prompts.USER_TEXT_PROMPT)
+        self.assertIn('personal_nif', prompts.USER_TEXT_PROMPT)
+        self.assertIn('invoice_number', prompts.USER_TEXT_PROMPT)
+        self.assertIn('total_amount', prompts.USER_TEXT_PROMPT)
+        self.assertIn('date', prompts.USER_TEXT_PROMPT)
 
-        assert 'business_nif' in prompts.USER_VISION_PROMPT
-        assert 'personal_nif' in prompts.USER_VISION_PROMPT
-        assert 'invoice_number' in prompts.USER_VISION_PROMPT
-        assert 'total_amount' in prompts.USER_VISION_PROMPT
-        assert 'date' in prompts.USER_VISION_PROMPT
+        self.assertIn('business_nif', prompts.USER_VISION_PROMPT)
+        self.assertIn('personal_nif', prompts.USER_VISION_PROMPT)
+        self.assertIn('invoice_number', prompts.USER_VISION_PROMPT)
+        self.assertIn('total_amount', prompts.USER_VISION_PROMPT)
+        self.assertIn('date', prompts.USER_VISION_PROMPT)
 
 
-class TestMain:
+class TestMain(unittest.TestCase):
     @patch('futurehealth.__main__.cli')
     def test_main_runs_cli(self, mock_cli):
         """Test that __main__.py runs the CLI when executed directly."""
         # This is tricky to test directly, but we can test the imports work
         import futurehealth.__main__
 
-        assert hasattr(futurehealth.__main__, 'cli')
+        self.assertTrue(hasattr(futurehealth.__main__, 'cli'))
