@@ -75,7 +75,7 @@ class TestValidateNIF(unittest.TestCase):
         ]
 
         for nif, expected in test_cases:
-            self.assertEqual(validate_nif(nif), expected)
+            self.assertEqual((nif, validate_nif(nif)), (nif, expected))
 
 
 class TestParseJsonFromModel(unittest.TestCase):
