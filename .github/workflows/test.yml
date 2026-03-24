@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv sync --dev
+          uv sync --dev --extra cli
 
       - name: Lint check
         id: lint-check
