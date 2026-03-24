@@ -1,29 +1,32 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=69.5.0,<80.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "future-healthcare-cli"
+authors = [{name="Filipe Pina", email="shelf-corncob-said@duck.com" }]
 dynamic = ["version"]
-description = "CLI for Future Healthcare workflows."
+description = "Python library and optional CLI for Future Healthcare"
 readme = "README.md"
-requires-python = ">=3.11"
-license = "MIT"
-authors = [
-    { name = "fopina" },
-]
+requires-python = ">=3.10,<4"
 dependencies = [
-    "classyclick",
-    "openai",
-    "pillow",
-    "platformdirs",
-    "pydantic",
-    "pymupdf",
-    "requests",
+    "pydantic>=2",
+    "requests>=2",
+]
+
+[project.optional-dependencies]
+cli = [
+    "classyclick>=0.8.0",
+    "click>=8",
+    "openai>=1",
+    "pillow>=10",
+    "platformdirs>=4",
+    "pymupdf>=1.24",
 ]
 
 [project.scripts]
-futurehealth = "futurehealth.__main__:cli"
+future-healthcare = "futurehealth.__main__:main"
+future-healthcare-cli = "futurehealth.__main__:main"
 
 [dependency-groups]
 dev = [
@@ -35,11 +38,14 @@ dev = [
     "twine",
 ]
 
-[tool.setuptools.dynamic]
-version = { attr = "futurehealth.__version__" }
+[project.urls]
+Homepage = "https://github.com/fopina/future-healthcare-cli"
 
 [tool.setuptools.packages.find]
 include = ["futurehealth*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "futurehealth.__version__"}
 
 [tool.ruff]
 line-length = 120

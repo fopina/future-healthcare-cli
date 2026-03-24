@@ -2,10 +2,6 @@ import json
 import re
 from pathlib import Path
 
-from platformdirs import user_config_path
-
-from .pdf import read_pdf
-
 APP_NAME = 'future-healthcare-cli'
 CONFIG_FILENAME = 'config.toml'
 TOKEN_FILENAME = 'token.txt'
@@ -13,16 +9,28 @@ TOKEN_FILENAME = 'token.txt'
 __all__ = ['read_pdf']
 
 
+def _user_config_path() -> Path:
+    from platformdirs import user_config_path
+
+    return user_config_path(APP_NAME)
+
+
+def read_pdf(*args, **kwargs):
+    from .pdf import read_pdf as _read_pdf
+
+    return _read_pdf(*args, **kwargs)
+
+
 def config_path() -> Path:
-    return user_config_path(APP_NAME) / CONFIG_FILENAME
+    return _user_config_path() / CONFIG_FILENAME
 
 
 def token_path() -> Path:
-    return user_config_path(APP_NAME) / TOKEN_FILENAME
+    return _user_config_path() / TOKEN_FILENAME
 
 
 def logs_path() -> Path:
-    return user_config_path(APP_NAME) / 'logs'
+    return _user_config_path() / 'logs'
 
 
 def parse_json_from_model(text: str) -> dict:
