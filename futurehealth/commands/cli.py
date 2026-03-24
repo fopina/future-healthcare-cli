@@ -1,5 +1,6 @@
-import click
 import tomllib
+
+import click
 
 from ..utils import config_path
 

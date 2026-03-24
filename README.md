@@ -29,3 +29,9 @@ HELLO right back at ya!
 ## Build
 
 Check out [CONTRIBUTING.md](CONTRIBUTING.md)
+
+Quick setup:
+
+```bash
+uv sync --group dev
+```
