@@ -221,10 +221,11 @@ class TestPrompts(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
-    @patch('futurehealth.__main__.cli')
+    @patch('futurehealth.commands.cli.cli')
     def test_main_runs_cli(self, mock_cli):
-        """Test that __main__.py runs the CLI when executed directly."""
-        # This is tricky to test directly, but we can test the imports work
+        """Test that __main__.py dispatches to the CLI entrypoint."""
         import futurehealth.__main__
 
-        self.assertTrue(hasattr(futurehealth.__main__, 'cli'))
+        futurehealth.__main__.main()
+
+        mock_cli.assert_called_once()
