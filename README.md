@@ -33,5 +33,5 @@ Check out [CONTRIBUTING.md](CONTRIBUTING.md)
 Quick setup:
 
 ```bash
-uv sync --group dev
+uv sync --dev
 ```

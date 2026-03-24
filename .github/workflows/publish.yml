@@ -56,7 +56,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv sync --group dev
+          uv sync --dev
 
       - name: Force right version
         run: |
