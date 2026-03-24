@@ -1,0 +1,80 @@
+name: 🚀 publish
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      repository:
+        required: false
+        default: pypi
+        type: string
+    secrets:
+      twine_token:
+        required: true
+      CODECOV_TOKEN:
+        required: false
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (for example: 1.2.3)'
+        type: string
+        required: true
+      repository:
+        description: 'Package index repository'
+        type: choice
+        options:
+          - pypi
+          - testpypi
+        default: pypi
+
+run-name: publish to ${{ inputs.repository }}
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  publish:
+    name: publish to ${{ inputs.repository }}
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync --dev
+
+      - name: Force right version
+        run: |
+          .github/change_version.py --set '${{ inputs.version }}'
+
+      - name: Build
+        run: uv run pyproject-build
+
+      - name: Publish
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.twine_token }}
+        run: |
+          uv run pyproject-build
+          uv run twine upload --verbose --repository ${{ inputs.repository }} dist/*
+
+      - name: Highlight
+        run: |
+          echo 'Published:' >> ${GITHUB_STEP_SUMMARY}
+          echo '* version: `${{ inputs.version }}`' >> ${GITHUB_STEP_SUMMARY}
+          echo '* repository: `${{ inputs.repository }}`' >> ${GITHUB_STEP_SUMMARY}

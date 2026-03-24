@@ -1,8 +1,51 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "future-healthcare-cli"
+dynamic = ["version"]
+description = "CLI for Future Healthcare workflows."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "fopina" },
+]
+dependencies = [
+    "classyclick",
+    "openai",
+    "pillow",
+    "platformdirs",
+    "pydantic",
+    "pymupdf",
+    "requests",
+]
+
+[project.scripts]
+futurehealth = "futurehealth.__main__:cli"
+
+[dependency-groups]
+dev = [
+    "build",
+    "pytest",
+    "pytest-cov",
+    "pytest-socket",
+    "ruff",
+    "twine",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "futurehealth.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["futurehealth*"]
+
 [tool.ruff]
 line-length = 120
 indent-width = 4
 
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
