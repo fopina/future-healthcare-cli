@@ -70,7 +70,6 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.twine_token }}
         run: |
-          uv build
           uv run twine upload --verbose --repository ${{ inputs.repository }} dist/*
 
       - name: Highlight

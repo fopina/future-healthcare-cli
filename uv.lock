@@ -449,7 +449,7 @@ wheels = [
 ]
 
 [[package]]
-name = "future-healthcare-cli"
+name = "future-healthcare"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
