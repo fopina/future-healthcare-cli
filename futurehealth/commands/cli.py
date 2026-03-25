@@ -1,6 +1,6 @@
 import tomllib
 
-import click
+import classyclick
 
 from ..utils import config_path
 
@@ -13,6 +13,7 @@ def load_config() -> dict:
         return tomllib.load(f)
 
 
-@click.group(context_settings={'default_map': load_config()})
-def cli():
+class CLI(classyclick.Group):
     """CLI for Future Healthcare"""
+
+    __config__ = classyclick.Group.Config(context_settings={'default_map': load_config()})

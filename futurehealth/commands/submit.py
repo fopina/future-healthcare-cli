@@ -14,11 +14,10 @@ from ..client.models import Building
 from ..utils import prompts
 from ..utils.models import ReceiptData
 from . import _mixins
-from .cli import cli
+from .cli import CLI
 
 
-@classyclick.command(group=cli)
-class Submit(_mixins.ContractMixin, _mixins.TokenMixin):
+class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     """Submit an expense, providing the receipt and, optionally, other attachments such as prescription"""
 
     receipt_file: Path = classyclick.Argument()

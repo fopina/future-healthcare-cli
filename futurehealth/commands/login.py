@@ -3,11 +3,10 @@ import click
 
 from .. import client
 from ..utils import token_path
-from .cli import cli
+from .cli import CLI
 
 
-@classyclick.command(group=cli)
-class Login:
+class Login(CLI.Command):
     username: str = classyclick.Option('-u', help='Username')
     password: str = classyclick.Option('-p', help='Password')
 

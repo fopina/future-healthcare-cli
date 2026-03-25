@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 cli = [
-    "classyclick>=0.8.0",
+    "classyclick>=0.9.0",
     "click>=8",
     "openai>=1",
     "pillow>=10",
