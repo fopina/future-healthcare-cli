@@ -4,9 +4,6 @@ import mimetypes
 from importlib import import_module
 from pathlib import Path
 
-import pymupdf
-from PIL import Image
-
 IMAGE_TYPE_PNG = 'image/png'
 IMAGE_TYPE_PDF = 'application/pdf'
 ALLOWED_IMAGE_TYPES = {IMAGE_TYPE_PNG, 'image/jpeg', 'image/jpg', 'image/webp'}
@@ -44,16 +41,22 @@ def read_pdf(path: str, min_chars=50, dpi=200, force_vision=False):
 
 def xconvert_from_path(path, dpi=200):
     """Convert PDF pages to compressed images."""
+    try:
+        pymupdf = import_module('pymupdf')
+        image_module = import_module('PIL.Image')
+    except ModuleNotFoundError as exc:
+        raise SystemExit('Vision support requires optional dependencies. Install future-healthcare[vision].') from exc
+
     doc = pymupdf.open(path)
     images = []
 
     for page in doc:
         pix = page.get_pixmap(dpi=dpi)
-        img = Image.frombytes('RGB', [pix.width, pix.height], pix.samples)
+        img = image_module.frombytes('RGB', [pix.width, pix.height], pix.samples)
         # Resize to maximum 1024x1024 to reduce size - phone photos will be huge...
         max_size = 1024
         if img.width > max_size or img.height > max_size:
-            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            img.thumbnail((max_size, max_size), image_module.Resampling.LANCZOS)
 
         images.append(img)
 

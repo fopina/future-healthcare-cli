@@ -6,6 +6,8 @@ from unittest.mock import MagicMock, patch
 from futurehealth.utils import parse_json_from_model, validate_nif
 from futurehealth.utils.pdf import detect_file_type, extract_text_from_pdf, read_pdf, xconvert_from_path
 
+vision_xconvert_from_path = xconvert_from_path
+
 
 class TestValidateNIF(unittest.TestCase):
     """Test cases for Portuguese NIF validation using mod11 algorithm."""
@@ -168,7 +170,7 @@ class TestPDFUtils(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Unsupported file type'):
                 read_pdf('test.txt')
 
-    @patch('futurehealth.utils.pdf_vision.import_module')
+    @patch('futurehealth.utils.pdf.import_module')
     def test_xconvert_from_path_resizing(self, mock_import_module):
         """Test that xconvert_from_path resizes large images."""
         # Mock a large image (2000x2000)
@@ -197,7 +199,7 @@ class TestPDFUtils(unittest.TestCase):
         # Check that thumbnail was called because width/height > 1024
         mock_img.thumbnail.assert_called_once()
 
-    @patch('futurehealth.utils.pdf_vision.import_module')
+    @patch('futurehealth.utils.pdf.import_module')
     def test_xconvert_from_path_no_resizing(self, mock_import_module):
         """Test that xconvert_from_path doesn't resize small images."""
         # Mock a small image (800x600)

@@ -15,6 +15,11 @@ from ..utils.models import ReceiptData
 from . import _mixins
 from .cli import CLI
 
+try:
+    from openai import OpenAI
+except ModuleNotFoundError:
+    OpenAI = None
+
 
 class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     """Submit an expense, providing the receipt and, optionally, other attachments such as prescription"""
@@ -106,12 +111,8 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         self.console_logger.info('Submission completed')
 
     def parse_receipt(self):
-        try:
-            from openai import OpenAI
-        except ModuleNotFoundError as exc:
-            raise SystemExit(
-                'Vision support requires optional dependencies. Install future-healthcare[vision].'
-            ) from exc
+        if OpenAI is None:
+            raise SystemExit('Vision support requires optional dependencies. Install future-healthcare[vision].')
 
         pdf_content = utils.read_pdf(self.receipt_file, force_vision=self.force_vision, dpi=self.vision_dpi)
 
