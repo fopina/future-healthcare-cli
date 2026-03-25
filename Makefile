@@ -6,11 +6,14 @@ lint-check:
 	uv run ruff format --diff
 	uv run ruff check
 
+sync:
+	uv sync --all-extras --dev
+
 test:
 	if [ -n "$(GITHUB_RUN_ID)" ]; then \
 		uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy; \
 	else \
-		uv run python -m pytest --cov; \
+		uv run pytest --cov; \
 	fi
 
 testpub:

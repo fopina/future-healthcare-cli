@@ -1,9 +1,12 @@
 import json
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
 from futurehealth.utils import parse_json_from_model, validate_nif
 from futurehealth.utils.pdf import detect_file_type, extract_text_from_pdf, read_pdf, xconvert_from_path
+
+vision_xconvert_from_path = xconvert_from_path
 
 
 class TestValidateNIF(unittest.TestCase):
@@ -112,18 +115,19 @@ class TestPDFUtils(unittest.TestCase):
         with patch('mimetypes.guess_type', return_value=('image/png', None)):
             self.assertEqual(detect_file_type('test.png'), 'image/png')
 
-    @patch('pymupdf.open')
+    @patch('futurehealth.utils.pdf.import_module')
     def test_extract_text_from_pdf(self, mock_pymupdf):
         """Test text extraction from PDF."""
         mock_doc = MagicMock()
         mock_page = MagicMock()
         mock_page.get_text.return_value = 'Sample text from PDF'
         mock_doc.__iter__.return_value = [mock_page]
-        mock_pymupdf.return_value = mock_doc
+        mock_pymupdf.return_value.open.return_value = mock_doc
 
         result = extract_text_from_pdf('test.pdf')
         self.assertEqual(result, 'Sample text from PDF')
-        mock_pymupdf.assert_called_once_with('test.pdf')
+        mock_pymupdf.assert_called_once_with('pymupdf')
+        mock_pymupdf.return_value.open.assert_called_once_with('test.pdf')
 
     @patch('futurehealth.utils.pdf.xconvert_from_path')
     @patch('futurehealth.utils.pdf.extract_text_from_pdf')
@@ -166,8 +170,8 @@ class TestPDFUtils(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Unsupported file type'):
                 read_pdf('test.txt')
 
-    @patch('pymupdf.open')
-    def test_xconvert_from_path_resizing(self, mock_pymupdf):
+    @patch('futurehealth.utils.pdf.import_module')
+    def test_xconvert_from_path_resizing(self, mock_import_module):
         """Test that xconvert_from_path resizes large images."""
         # Mock a large image (2000x2000)
         mock_pix = MagicMock()
@@ -180,22 +184,23 @@ class TestPDFUtils(unittest.TestCase):
 
         mock_doc = MagicMock()
         mock_doc.__iter__.return_value = [mock_page]
-        mock_pymupdf.return_value = mock_doc
+        mock_pymupdf = MagicMock()
+        mock_pymupdf.open.return_value = mock_doc
+        mock_image_module = MagicMock()
+        mock_img = MagicMock()
+        mock_img.width = 2000
+        mock_img.height = 2000
+        mock_image_module.frombytes.return_value = mock_img
+        mock_import_module.side_effect = [mock_pymupdf, mock_image_module]
 
-        with patch('PIL.Image.frombytes') as mock_frombytes:
-            mock_img = MagicMock()
-            mock_img.width = 2000
-            mock_img.height = 2000
-            mock_frombytes.return_value = mock_img
+        result = vision_xconvert_from_path('test.pdf')
 
-            result = xconvert_from_path('test.pdf')
+        self.assertEqual(len(result), 1)
+        # Check that thumbnail was called because width/height > 1024
+        mock_img.thumbnail.assert_called_once()
 
-            self.assertEqual(len(result), 1)
-            # Check that thumbnail was called because width/height > 1024
-            mock_img.thumbnail.assert_called_once()
-
-    @patch('pymupdf.open')
-    def test_xconvert_from_path_no_resizing(self, mock_pymupdf):
+    @patch('futurehealth.utils.pdf.import_module')
+    def test_xconvert_from_path_no_resizing(self, mock_import_module):
         """Test that xconvert_from_path doesn't resize small images."""
         # Mock a small image (800x600)
         mock_pix = MagicMock()
@@ -208,16 +213,22 @@ class TestPDFUtils(unittest.TestCase):
 
         mock_doc = MagicMock()
         mock_doc.__iter__.return_value = [mock_page]
-        mock_pymupdf.return_value = mock_doc
+        mock_pymupdf = MagicMock()
+        mock_pymupdf.open.return_value = mock_doc
+        mock_image_module = MagicMock()
+        mock_img = MagicMock()
+        mock_img.width = 800
+        mock_img.height = 600
+        mock_image_module.frombytes.return_value = mock_img
+        mock_import_module.side_effect = [mock_pymupdf, mock_image_module]
 
-        with patch('PIL.Image.frombytes') as mock_frombytes:
-            with patch('PIL.Image.Image.thumbnail') as mock_thumbnail:
-                mock_img = MagicMock()
-                mock_img.width = 800
-                mock_img.height = 600
-                mock_frombytes.return_value = mock_img
+        result = vision_xconvert_from_path('test.pdf')
 
-                result = xconvert_from_path('test.pdf')
+        self.assertEqual(len(result), 1)
+        mock_img.thumbnail.assert_not_called()
 
-                self.assertEqual(len(result), 1)
-                mock_thumbnail.assert_not_called()
+    def test_xconvert_from_path_requires_optional_dependency(self):
+        """Test that PDF vision features raise a helpful optional dependency error."""
+        with patch.dict(sys.modules, {'PIL': None, 'PIL.Image': None}):
+            with self.assertRaisesRegex(SystemExit, r'future-healthcare\[vision\]'):
+                xconvert_from_path('test.pdf')

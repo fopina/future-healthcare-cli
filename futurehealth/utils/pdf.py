@@ -1,9 +1,8 @@
 import base64
 import io
 import mimetypes
+from importlib import import_module
 from pathlib import Path
-
-import pymupdf
 
 IMAGE_TYPE_PNG = 'image/png'
 IMAGE_TYPE_PDF = 'application/pdf'
@@ -40,6 +39,30 @@ def read_pdf(path: str, min_chars=50, dpi=200, force_vision=False):
     raise ValueError(f'Unsupported file type or cannot decode: {path}')
 
 
+def xconvert_from_path(path, dpi=200):
+    """Convert PDF pages to compressed images."""
+    try:
+        pymupdf = import_module('pymupdf')
+        image_module = import_module('PIL.Image')
+    except ModuleNotFoundError as exc:
+        raise SystemExit('Vision support requires optional dependencies. Install future-healthcare[vision].') from exc
+
+    doc = pymupdf.open(path)
+    images = []
+
+    for page in doc:
+        pix = page.get_pixmap(dpi=dpi)
+        img = image_module.frombytes('RGB', [pix.width, pix.height], pix.samples)
+        # Resize to maximum 1024x1024 to reduce size - phone photos will be huge...
+        max_size = 1024
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), image_module.Resampling.LANCZOS)
+
+        images.append(img)
+
+    return images
+
+
 def detect_file_type(file_path):
     """Return MIME type"""
     mime, _ = mimetypes.guess_type(file_path)
@@ -48,29 +71,10 @@ def detect_file_type(file_path):
 
 def extract_text_from_pdf(path):
     """Try to extract text from a PDF"""
+    pymupdf = import_module('pymupdf')
     doc = pymupdf.open(path)
     text = '\n'.join(page.get_text() for page in doc)
     return text
-
-
-def xconvert_from_path(path, dpi=200):
-    """Convert PDF pages to compressed images"""
-    from PIL import Image
-
-    doc = pymupdf.open(path)
-    images = []
-
-    for page in doc:
-        pix = page.get_pixmap(dpi=dpi)
-        img = Image.frombytes('RGB', [pix.width, pix.height], pix.samples)
-        # Resize to maximum 1024x1024 to reduce size - phone photos will be huge...
-        max_size = 1024
-        if img.width > max_size or img.height > max_size:
-            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-
-        images.append(img)
-
-    return images
 
 
 def image_file_to_base64(path: Path, mime: str = None):

@@ -221,7 +221,7 @@ class TestPrompts(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
-    @patch('futurehealth.commands.cli.cli')
+    @patch('futurehealth.commands.cli.CLI.click')
     def test_main_runs_cli(self, mock_cli):
         """Test that __main__.py dispatches to the CLI entrypoint."""
         import futurehealth.__main__

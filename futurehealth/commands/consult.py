@@ -1,13 +1,11 @@
-import classyclick
 import click
 
 from ..client import Client
 from . import _mixins
-from .cli import cli
+from .cli import CLI
 
 
-@classyclick.command(group=cli)
-class Consult(_mixins.ContractMixin, _mixins.TokenMixin):
+class Consult(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     _client = None
 
     def __call__(self):
