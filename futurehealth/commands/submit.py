@@ -7,7 +7,6 @@ from pathlib import Path
 
 import classyclick
 import click
-from openai import OpenAI
 
 from .. import client, utils
 from ..client.models import Building
@@ -107,6 +106,13 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         self.console_logger.info('Submission completed')
 
     def parse_receipt(self):
+        try:
+            from openai import OpenAI
+        except ModuleNotFoundError as exc:
+            raise SystemExit(
+                'Vision support requires optional dependencies. Install future-healthcare[vision].'
+            ) from exc
+
         pdf_content = utils.read_pdf(self.receipt_file, force_vision=self.force_vision, dpi=self.vision_dpi)
 
         client = OpenAI(

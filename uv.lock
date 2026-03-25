@@ -443,10 +443,11 @@ dependencies = [
 [package.optional-dependencies]
 cli = [
     { name = "classyclick" },
-    { name = "click" },
+    { name = "platformdirs" },
+]
+vision = [
     { name = "openai" },
     { name = "pillow" },
-    { name = "platformdirs" },
     { name = "pymupdf" },
 ]
 
@@ -462,15 +463,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "classyclick", marker = "extra == 'cli'", specifier = ">=0.9.0" },
-    { name = "click", marker = "extra == 'cli'", specifier = ">=8" },
-    { name = "openai", marker = "extra == 'cli'", specifier = ">=1" },
-    { name = "pillow", marker = "extra == 'cli'", specifier = ">=10" },
+    { name = "openai", marker = "extra == 'vision'", specifier = ">=1" },
+    { name = "pillow", marker = "extra == 'vision'", specifier = ">=10" },
     { name = "platformdirs", marker = "extra == 'cli'", specifier = ">=4" },
     { name = "pydantic", specifier = ">=2" },
-    { name = "pymupdf", marker = "extra == 'cli'", specifier = ">=1.24" },
+    { name = "pymupdf", marker = "extra == 'vision'", specifier = ">=1.24" },
     { name = "requests", specifier = ">=2" },
 ]
-provides-extras = ["cli"]
+provides-extras = ["cli", "vision"]
 
 [package.metadata.requires-dev]
 dev = [

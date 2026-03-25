@@ -6,6 +6,9 @@ lint-check:
 	uv run ruff format --diff
 	uv run ruff check
 
+sync:
+	uv sync --dev --extra cli --extra vision
+
 test:
 	if [ -n "$(GITHUB_RUN_ID)" ]; then \
 		uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy; \
