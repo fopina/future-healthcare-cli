@@ -16,7 +16,10 @@ def _user_config_path() -> Path:
 
 
 def read_pdf(*args, **kwargs):
-    from .pdf import read_pdf as _read_pdf
+    try:
+        from .pdf import read_pdf as _read_pdf
+    except ModuleNotFoundError as exc:
+        raise SystemExit('Vision support requires optional dependencies. Install future-healthcare[vision].') from exc
 
     return _read_pdf(*args, **kwargs)
 

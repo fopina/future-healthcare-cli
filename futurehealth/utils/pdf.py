@@ -4,6 +4,9 @@ import mimetypes
 from importlib import import_module
 from pathlib import Path
 
+import pymupdf
+from PIL import Image
+
 IMAGE_TYPE_PNG = 'image/png'
 IMAGE_TYPE_PDF = 'application/pdf'
 ALLOWED_IMAGE_TYPES = {IMAGE_TYPE_PNG, 'image/jpeg', 'image/jpg', 'image/webp'}
@@ -39,6 +42,24 @@ def read_pdf(path: str, min_chars=50, dpi=200, force_vision=False):
     raise ValueError(f'Unsupported file type or cannot decode: {path}')
 
 
+def xconvert_from_path(path, dpi=200):
+    """Convert PDF pages to compressed images."""
+    doc = pymupdf.open(path)
+    images = []
+
+    for page in doc:
+        pix = page.get_pixmap(dpi=dpi)
+        img = Image.frombytes('RGB', [pix.width, pix.height], pix.samples)
+        # Resize to maximum 1024x1024 to reduce size - phone photos will be huge...
+        max_size = 1024
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+        images.append(img)
+
+    return images
+
+
 def detect_file_type(file_path):
     """Return MIME type"""
     mime, _ = mimetypes.guess_type(file_path)
@@ -51,13 +72,6 @@ def extract_text_from_pdf(path):
     doc = pymupdf.open(path)
     text = '\n'.join(page.get_text() for page in doc)
     return text
-
-
-def xconvert_from_path(path, dpi=200):
-    """Convert PDF pages to compressed images."""
-    from .pdf_vision import xconvert_from_path as _xconvert_from_path
-
-    return _xconvert_from_path(path, dpi=dpi)
 
 
 def image_file_to_base64(path: Path, mime: str = None):
