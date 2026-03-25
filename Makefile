@@ -7,7 +7,7 @@ lint-check:
 	uv run ruff check
 
 sync:
-	uv sync --dev --extra cli --extra vision
+	uv sync --all-extras --dev
 
 test:
 	if [ -n "$(GITHUB_RUN_ID)" ]; then \
