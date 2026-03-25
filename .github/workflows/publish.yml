@@ -56,21 +56,20 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv sync --dev
+          uv sync --dev --extra cli
 
       - name: Force right version
         run: |
           .github/change_version.py --set '${{ inputs.version }}'
 
       - name: Build
-        run: uv run pyproject-build
+        run: uv build
 
       - name: Publish
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.twine_token }}
         run: |
-          uv run pyproject-build
           uv run twine upload --verbose --repository ${{ inputs.repository }} dist/*
 
       - name: Highlight

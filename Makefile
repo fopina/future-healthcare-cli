@@ -15,5 +15,5 @@ test:
 
 testpub:
 	rm -fr dist
-	uv run pyproject-build
+	uv build
 	uv run twine upload --repository testpypi dist/*
