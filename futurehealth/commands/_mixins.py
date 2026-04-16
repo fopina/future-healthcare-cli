@@ -2,16 +2,16 @@ from functools import cached_property
 
 import click
 
-from ..client import ContractClient
+from ..client import Client, ContractClient
 from ..utils import token_path
 
 
 class ContractMixin:
     @cached_property
     def contract(self):
-        contract = self._client.contracts()[0]
+        contract = self.client.contracts()[0]
         assert contract['ContractState'] == 'ACTIVE', 'Contract NOT active'
-        return ContractClient(self._client, contract['Token'])
+        return ContractClient(self.client, contract['Token'])
 
 
 class TokenMixin:
@@ -23,3 +23,7 @@ class TokenMixin:
         except FileNotFoundError:
             raise click.ClickException('Run `login` first')
         return token
+
+    @cached_property
+    def client(self):
+        return Client(token=self.token)

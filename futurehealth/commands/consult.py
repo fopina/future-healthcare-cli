@@ -1,15 +1,11 @@
 import click
 
-from ..client import Client
 from . import _mixins
 from .cli import CLI
 
 
 class Consult(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
-    _client = None
-
     def __call__(self):
-        self._client = Client(token=self.token)
         assert self.contract.validate_feature('REFUNDS_CONSULT'), 'Refund consult not available'
         page = 1
         while True:

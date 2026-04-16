@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 cli = [
-    "classyclick>=0.9.0",
+    "classyclick>=1.0.0",
     "platformdirs>=4",
 ]
 vision = [

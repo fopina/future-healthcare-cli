@@ -61,8 +61,6 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         help='Whether this expense was already partially covered by another entity'
     )
 
-    _client = None
-
     def __call__(self):
         self.setup_logging()
         try:
@@ -70,7 +68,6 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
             self.review_data(data)
             self.console_logger.info(f'Parsed data after review: {data}')
 
-            self._client = client.Client(token=self.token)
             assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
             building, new_nif = self.get_building(data.business_nif)
             self.console_logger.info('Building selected: %s', building)
@@ -79,10 +76,10 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                 data.business_nif = new_nif
 
             docs = []
-            docs.append(self._client.files(self.receipt_file, is_invoice=True)['guid'])
+            docs.append(self.client.files(self.receipt_file, is_invoice=True)['guid'])
             self.console_logger.info('Document created: %s', docs[-1])
             for other in self.other_attachments or []:
-                docs.append(self._client.files(other)['guid'])
+                docs.append(self.client.files(other)['guid'])
                 self.console_logger.info('Document created: %s', docs[-1])
 
             service = self.get_service()
