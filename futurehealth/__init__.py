@@ -20,5 +20,5 @@ __version_tuple__ = version_tuple = tuple(map(int, version.split('.')))
 warnings.filterwarnings(
     'ignore',
     category=DeprecationWarning,
-    message=r'.*swig.*__module__.*',
+    message=r'(?i).*swig.*__module__.*',
 )

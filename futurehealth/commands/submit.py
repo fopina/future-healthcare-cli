@@ -26,6 +26,11 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
 
     receipt_file: Path = classyclick.Argument()
     other_attachments: list[Path] = classyclick.Argument(nargs=-1, type=Path)
+    business_nif: str = classyclick.Option(help='Business NIF from the receipt. Ignored if --vision is used')
+    invoice_number: str = classyclick.Option(help='Invoice or receipt number. Ignored if --vision is used')
+    total_amount: float = classyclick.Option(help='Total amount paid. Ignored if --vision is used')
+    date: str = classyclick.Option(help='Treatment/payment date from the receipt. Ignored if --vision is used')
+    vision: bool = classyclick.Option(help='Use OCR/Vision to extract required receipt fields')
 
     person: str = classyclick.Option(
         '-p', help='Name of the insured person. If not specified or multiple matches, it will be prompted interactively'
@@ -61,16 +66,13 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         help='Whether this expense was already partially covered by another entity'
     )
 
-    _client = None
-
     def __call__(self):
         self.setup_logging()
         try:
-            data = self.parse_receipt()
+            data = self.get_receipt_data()
             self.review_data(data)
             self.console_logger.info(f'Parsed data after review: {data}')
 
-            self._client = client.Client(token=self.token)
             assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
             building, new_nif = self.get_building(data.business_nif)
             self.console_logger.info('Building selected: %s', building)
@@ -79,10 +81,10 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                 data.business_nif = new_nif
 
             docs = []
-            docs.append(self._client.files(self.receipt_file, is_invoice=True)['guid'])
+            docs.append(self.client.files(self.receipt_file, is_invoice=True)['guid'])
             self.console_logger.info('Document created: %s', docs[-1])
             for other in self.other_attachments or []:
-                docs.append(self._client.files(other)['guid'])
+                docs.append(self.client.files(other)['guid'])
                 self.console_logger.info('Document created: %s', docs[-1])
 
             service = self.get_service()
@@ -110,9 +112,43 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
             raise
         self.console_logger.info('Submission completed')
 
+    def get_receipt_data(self):
+        if self.vision:
+            return self.parse_receipt()
+
+        self.validate_required_receipt_fields()
+        data = ReceiptData(
+            business_nif=self.business_nif,
+            invoice_number=self.invoice_number,
+            total_amount=self.total_amount,
+            date=self.date,
+        )
+        data.date = self.normalize_date(data.date)
+        self.console_logger.debug(f'Using receipt data from CLI flags: {data}')
+        return data
+
+    def validate_required_receipt_fields(self):
+        missing = [
+            flag
+            for flag, value in (
+                ('--business-nif', self.business_nif),
+                ('--invoice-number', self.invoice_number),
+                ('--total-amount', self.total_amount),
+                ('--date', self.date),
+            )
+            if value in (None, '')
+        ]
+        if missing:
+            joined = ', '.join(missing)
+            raise click.ClickException(
+                f'Missing required receipt fields: {joined}. Pass them explicitly or use --vision.'
+            )
+
     def parse_receipt(self):
         if OpenAI is None:
-            raise SystemExit('Vision support requires optional dependencies. Install future-healthcare[vision].')
+            raise click.ClickException(
+                'Vision support requires optional dependencies. Install future-healthcare[vision].'
+            )
 
         pdf_content = utils.read_pdf(self.receipt_file, force_vision=self.force_vision, dpi=self.vision_dpi)
 
@@ -141,17 +177,21 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         message = completion.choices[0].message.content
         self.console_logger.debug(f'Parsed receipt details: {message}')
         data = ReceiptData(**utils.parse_json_from_model(message))
-        # convert date - not done in LLM as testing shown issues with proper format conversion
-        # it's either YEAR MM DD or DD MM YEAR (no US format), easy to detect
-        date_parts = re.findall(r'\b(\d+)\b', data.date)
-        if len(date_parts[2]) == 4:
-            date_parts.reverse()
-        elif len(date_parts[0]) != 4:
-            raise click.ClickException(f'{data.date} does not seem to contain full year')
-        data.date = '-'.join(date_parts)
+        data.date = self.normalize_date(data.date)
         self.console_logger.debug(f'Tokens used: {completion.usage}')
         self.console_logger.debug(f'Parsed data (before review): {data}')
         return data
+
+    def normalize_date(self, value: str) -> str:
+        # It's either YEAR MM DD or DD MM YEAR (no US format), easy to detect.
+        date_parts = re.findall(r'\b(\d+)\b', value)
+        if len(date_parts) < 3:
+            raise click.ClickException(f'{value} does not seem to contain a full date')
+        if len(date_parts[2]) == 4:
+            date_parts.reverse()
+        elif len(date_parts[0]) != 4:
+            raise click.ClickException(f'{value} does not seem to contain full year')
+        return '-'.join(date_parts[:3])
 
     def setup_logging(self):
         # Set up logging directory and file copying

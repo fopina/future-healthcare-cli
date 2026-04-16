@@ -162,21 +162,21 @@ class ContractClient(requests.Session):
         del data['InsuredPersons']
         return RefundsRequestSetupResponse(services, ip, data)
 
-    def unified_refunds(self, page_size=5, page=1) -> bool:
+    def unified_refunds(self, page_size=5, page=1) -> models.UnifiedRefundsResult:
         """Validate that contract has feature."""
 
         r = self.get(
             'unified-refunds',
             params={'page': page, 'pageSize': page_size},
         )
-        return r['body']
+        return models.UnifiedRefundsResult.model_validate(r['body'])
 
     def load_buildings(self, nif: str) -> list[models.Building]:
         """Validate that contract has feature."""
 
         r = self.post(
             'refunds-requests/loadBuildings',
-            json={'practiceNif': nif},
+            json={'practiceNif': nif, 'practiceNifCode': 'PT'},
         )
         return [models.Building(**building) for building in r['body']['buildings']]
 

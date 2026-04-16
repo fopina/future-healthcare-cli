@@ -2,6 +2,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import click
+
 from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands.submit import Submit
 from futurehealth.utils.models import ReceiptData
@@ -14,6 +16,11 @@ class TestSubmitCommand(unittest.TestCase):
         """Test Submit command initialization with options."""
         submit = Submit(
             receipt_file=Path('test.pdf'),
+            business_nif='123456789',
+            invoice_number='INV-1',
+            total_amount=12.5,
+            date='2023-01-01',
+            vision=False,
             person='John',
             service='Medical',
             openai_api_key='test_key',
@@ -26,6 +33,11 @@ class TestSubmitCommand(unittest.TestCase):
         )
 
         self.assertEqual(submit.receipt_file, Path('test.pdf'))
+        self.assertEqual(submit.business_nif, '123456789')
+        self.assertEqual(submit.invoice_number, 'INV-1')
+        self.assertEqual(submit.total_amount, 12.5)
+        self.assertEqual(submit.date, '2023-01-01')
+        self.assertFalse(submit.vision)
         self.assertEqual(submit.person, 'John')
         self.assertEqual(submit.service, 'Medical')
         self.assertEqual(submit.openai_api_key, 'test_key')
@@ -42,7 +54,7 @@ class TestSubmitCommand(unittest.TestCase):
     @patch('futurehealth.commands.submit.Submit.get_service')
     @patch('futurehealth.commands.submit.Submit.get_person')
     @patch('futurehealth.commands.submit.Submit.review_data')
-    @patch('futurehealth.client.Client')
+    @patch('futurehealth.commands._mixins.Client')
     @patch('futurehealth.client.ContractClient')
     def test_submit_full_flow(
         self,
@@ -66,16 +78,6 @@ class TestSubmitCommand(unittest.TestCase):
         mock_contract.multiple_refunds_requests.return_value = None
         mock_contract_client.return_value = mock_contract
 
-        # Mock data and selections
-        mock_data = ReceiptData(
-            business_nif='123456789',
-            personal_nif='987654321',
-            invoice_number='INV001',
-            total_amount=100.50,
-            date='2023-01-01',
-        )
-        mock_parse_receipt.return_value = mock_data
-
         mock_building = Building(id='building_123', name='Hospital A', address='123 Main St')
         mock_get_building.return_value = (mock_building, '123456789')
 
@@ -86,7 +88,13 @@ class TestSubmitCommand(unittest.TestCase):
         mock_get_person.return_value = mock_person
 
         # Create submit command
-        submit = Submit(receipt_file=Path('test.pdf'))
+        submit = Submit(
+            receipt_file=Path('test.pdf'),
+            business_nif='123456789',
+            invoice_number='INV001',
+            total_amount=100.50,
+            date='2023-01-01',
+        )
         submit.contract = mock_contract
         submit.file_logger = MagicMock()
         submit.console_logger = MagicMock()
@@ -97,8 +105,13 @@ class TestSubmitCommand(unittest.TestCase):
 
         # Verify calls
         mock_setup_logging.assert_called_once()
-        mock_parse_receipt.assert_called_once()
-        mock_review.assert_called_once_with(mock_data)
+        mock_parse_receipt.assert_not_called()
+        reviewed_data = mock_review.call_args[0][0]
+        self.assertEqual(reviewed_data.business_nif, '123456789')
+        self.assertEqual(reviewed_data.invoice_number, 'INV001')
+        self.assertEqual(reviewed_data.total_amount, 100.50)
+        self.assertEqual(reviewed_data.date, '2023-01-01')
+        self.assertIsNone(reviewed_data.personal_nif)
         mock_client_class.assert_called_once()
         mock_contract.validate_feature.assert_called_once_with('REFUNDS_SUBMISSION')
         mock_get_building.assert_called_once_with('123456789')
@@ -122,7 +135,7 @@ class TestSubmitCommand(unittest.TestCase):
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.Submit.parse_receipt')
     @patch('futurehealth.commands.submit.Submit.review_data')
-    @patch('futurehealth.commands.submit.client.Client')
+    @patch('futurehealth.commands._mixins.Client')
     def test_submit_feature_not_available(self, mock_client_class, mock_review, mock_parse_receipt, mock_setup_logging):
         """Test submit when REFUNDS_SUBMISSION feature is not available."""
         mock_client = MagicMock()
@@ -131,9 +144,13 @@ class TestSubmitCommand(unittest.TestCase):
         mock_contract = MagicMock()
         mock_contract.validate_feature.return_value = False
 
-        mock_parse_receipt.return_value = ReceiptData(business_nif='1', invoice_number='1', total_amount=1, date='1')
-
-        submit = Submit(receipt_file=Path('test.pdf'))
+        submit = Submit(
+            receipt_file=Path('test.pdf'),
+            business_nif='1',
+            invoice_number='1',
+            total_amount=1,
+            date='2023-01-01',
+        )
         submit.contract = mock_contract
         submit.file_logger = MagicMock()
         submit.console_logger = MagicMock()
@@ -141,6 +158,72 @@ class TestSubmitCommand(unittest.TestCase):
 
         with self.assertRaises(AssertionError):
             submit()
+
+    @patch('futurehealth.commands.submit.Submit.setup_logging')
+    @patch('futurehealth.commands.submit.Submit.parse_receipt')
+    @patch('futurehealth.commands.submit.Submit.review_data')
+    @patch('futurehealth.commands._mixins.Client')
+    def test_submit_requires_flags_or_vision(
+        self, mock_client_class, mock_review, mock_parse_receipt, mock_setup_logging
+    ):
+        """Test submit validates required CLI fields when vision is disabled."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_contract = MagicMock()
+        mock_contract.validate_feature.return_value = True
+
+        submit = Submit(receipt_file=Path('test.pdf'))
+        submit.contract = mock_contract
+        submit.file_logger = MagicMock()
+        submit.console_logger = MagicMock()
+        submit.token = 'test_token'
+        submit.business_nif = None
+        submit.invoice_number = None
+        submit.total_amount = None
+        submit.date = None
+
+        with self.assertRaisesRegex(
+            click.ClickException,
+            r'Missing required receipt fields: --business-nif, --invoice-number, --total-amount, --date',
+        ):
+            submit.validate_required_receipt_fields()
+
+        mock_parse_receipt.assert_not_called()
+        mock_review.assert_not_called()
+
+    @patch('futurehealth.commands.submit.Submit.parse_receipt')
+    def test_get_receipt_data_uses_vision_when_enabled(self, mock_parse_receipt):
+        """Test receipt data comes from OCR only when vision is enabled."""
+        mock_data = ReceiptData(
+            business_nif='123456789', invoice_number='INV001', total_amount=100.50, date='2023-01-01'
+        )
+        mock_parse_receipt.return_value = mock_data
+
+        submit = Submit(receipt_file=Path('test.pdf'), vision=True)
+
+        result = submit.get_receipt_data()
+
+        self.assertEqual(result, mock_data)
+        mock_parse_receipt.assert_called_once()
+
+    def test_get_receipt_data_uses_flags_by_default(self):
+        """Test receipt data comes from CLI flags when vision is disabled."""
+        submit = Submit(
+            receipt_file=Path('test.pdf'),
+            business_nif='123456789',
+            invoice_number='INV001',
+            total_amount='100.50',
+            date='01/01/2023',
+        )
+        submit.console_logger = MagicMock()
+
+        result = submit.get_receipt_data()
+
+        self.assertEqual(result.business_nif, '123456789')
+        self.assertEqual(result.invoice_number, 'INV001')
+        self.assertEqual(result.total_amount, 100.50)
+        self.assertEqual(result.date, '2023-01-01')
 
     @patch('futurehealth.commands.submit.utils.read_pdf')
     @patch('futurehealth.commands.submit.OpenAI')
