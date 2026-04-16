@@ -88,4 +88,4 @@ The CLI stores local state under the platform-specific config directory for `fut
 
 ## Development
 
-See [CONTRIBUTING.md](/Users/fopina/Documents/future-healthcare-cli/CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md).
