@@ -176,7 +176,7 @@ class ContractClient(requests.Session):
 
         r = self.post(
             'refunds-requests/loadBuildings',
-            json={'practiceNif': nif},
+            json={'practiceNif': nif, 'practiceNifCode': 'PT'},
         )
         return [models.Building(**building) for building in r['body']['buildings']]
 
