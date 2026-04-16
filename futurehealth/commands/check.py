@@ -4,9 +4,9 @@ from . import _mixins
 from .cli import CLI
 
 
-class Consult(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
+class Check(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     def __call__(self):
-        assert self.contract.validate_feature('REFUNDS_CONSULT'), 'Refund consult not available'
+        assert self.contract.validate_feature('REFUNDS_CONSULT'), 'Refund check not available'
         page = 1
         while True:
             r = self.contract.unified_refunds(page_size=20, page=page)
