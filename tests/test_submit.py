@@ -178,12 +178,16 @@ class TestSubmitCommand(unittest.TestCase):
         submit.file_logger = MagicMock()
         submit.console_logger = MagicMock()
         submit.token = 'test_token'
+        submit.business_nif = None
+        submit.invoice_number = None
+        submit.total_amount = None
+        submit.date = None
 
         with self.assertRaisesRegex(
             click.ClickException,
             r'Missing required receipt fields: --business-nif, --invoice-number, --total-amount, --date',
         ):
-            submit()
+            submit.validate_required_receipt_fields()
 
         mock_parse_receipt.assert_not_called()
         mock_review.assert_not_called()

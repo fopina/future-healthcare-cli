@@ -137,7 +137,7 @@ class TestMixins(unittest.TestCase):
         mock_contract_client.return_value = 'contract_client_instance'
 
         mixin = ContractMixin()
-        mixin._client = mock_client
+        mixin.client = mock_client
 
         contract = mixin.contract
 
@@ -150,7 +150,7 @@ class TestMixins(unittest.TestCase):
         mock_client.contracts.return_value = [{'Token': 'contract_token', 'ContractState': 'INACTIVE'}]
 
         mixin = ContractMixin()
-        mixin._client = mock_client
+        mixin.client = mock_client
 
         with self.assertRaises(AssertionError):
             _ = mixin.contract
