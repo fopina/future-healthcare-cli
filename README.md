@@ -1,31 +1,91 @@
 # future-healthcare-cli
 
-[![ci](https://github.com/fopina/python-package-template/actions/workflows/publish-main.yml/badge.svg)](https://github.com/fopina/python-package-template/actions/workflows/publish-main.yml)
-[![test](https://github.com/fopina/python-package-template/actions/workflows/test.yml/badge.svg)](https://github.com/fopina/python-package-template/actions/workflows/test.yml)
-[![codecov](https://codecov.io/github/fopina/python-package-template/graph/badge.svg)](https://codecov.io/github/fopina/python-package-template)
-[![PyPI pyversions](https://img.shields.io/pypi/pyversions/fp-github-template-example.svg)](https://pypi.org/project/fp-github-template-example/)
-[![Current version on PyPi](https://img.shields.io/pypi/v/fp-github-template-example)](https://pypi.org/project/fp-github-template-example/)
-[![Very popular](https://img.shields.io/pypi/dm/fp-github-template-example)](https://pypistats.org/packages/fp-github-template-example)
+[![ci](https://github.com/fopina/future-healthcare-cli/actions/workflows/publish-main.yml/badge.svg)](https://github.com/fopina/future-healthcare-cli/actions/workflows/publish-main.yml)
+[![test](https://github.com/fopina/future-healthcare-cli/actions/workflows/test.yml/badge.svg)](https://github.com/fopina/future-healthcare-cli/actions/workflows/test.yml)
+[![codecov](https://codecov.io/github/fopina/future-healthcare-cli/graph/badge.svg)](https://codecov.io/github/fopina/future-healthcare-cli)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/future-healthcare.svg)](https://pypi.org/project/future-healthcare/)
+[![Current version on PyPI](https://img.shields.io/pypi/v/future-healthcare)](https://pypi.org/project/future-healthcare/)
+[![Very popular](https://img.shields.io/pypi/dm/future-healthcare)](https://pypistats.org/packages/future-healthcare)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-CLI that echos whatever you tell it to.
+Python library and optional CLI for Future Healthcare.
+
+The CLI helps with common refund flows:
+
+- `login` stores your API token locally
+- `check` lists refund status/history
+- `submit` submits a new expense with receipt metadata
+
+## Install
+
+Install the CLI with `uv`:
+
+```bash
+uv tool install 'future-healthcare[cli]'
+```
+
+This makes the `future-healthcare` command available on your system.
+
+If you want receipt parsing via OCR / vision models as well:
+
+```bash
+uv tool install 'future-healthcare[cli,vision]'
+```
+
+## Run Without Installing
+
+You can also run it directly with `uvx`:
+
+```bash
+uvx --from 'future-healthcare[cli]' future-healthcare --help
+```
+
+With vision support:
+
+```bash
+uvx --from 'future-healthcare[cli,vision]' future-healthcare submit --help
+```
 
 ## Usage
 
-```
-$ example-cli
-Got nothing to say?
+Log in first:
 
-$ example-cli hello
-HELLO right back at ya!
+```bash
+future-healthcare login -u YOUR_USERNAME -p YOUR_PASSWORD
 ```
 
-```python
->>> from example import demo
->>> demo.echo('ehlo')
-'EHLO right back at ya!'
+Check existing refunds:
+
+```bash
+future-healthcare check
 ```
 
-## Build
+Submit a receipt by passing the required fields explicitly:
 
-Check out [CONTRIBUTING.md](CONTRIBUTING.md)
+```bash
+future-healthcare submit ~/Downloads/example-receipt.pdf \
+  --business-nif 509876543 \
+  --invoice-number 'INV 2026/0001' \
+  --total-amount 40 \
+  --date '2026-03-14'
+```
+
+Or let the CLI extract those fields from the receipt with vision support:
+
+```bash
+future-healthcare submit ~/Downloads/example-receipt.pdf --vision
+```
+
+The `submit` command may prompt you to choose the insured person, service, or building when multiple matches are available.
+
+## Local Data
+
+The CLI stores local state under the platform-specific config directory for `future-healthcare-cli`, including:
+
+- `token.txt` for the login token
+- `config.toml` for CLI defaults
+- `logs/` for submission logs and copied input files
+
+## Development
+
+See [CONTRIBUTING.md](/Users/fopina/Documents/future-healthcare-cli/CONTRIBUTING.md).
