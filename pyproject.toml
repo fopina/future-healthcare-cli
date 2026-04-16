@@ -74,6 +74,9 @@ line-ending = "auto"
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q --disable-socket"
+filterwarnings = [
+    "ignore:(?i).*swig.*__module__.*:DeprecationWarning",
+]
 testpaths = [
     "tests",
 ]
