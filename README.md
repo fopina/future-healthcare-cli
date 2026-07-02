@@ -59,9 +59,7 @@ future-healthcare submit ~/Downloads/example-receipt.pdf \
 ```
 
 The `submit` command may prompt you to choose the insured person, service, or building when multiple matches are available.
-Receipt data extraction happens before calling the CLI. Agent users can use the bundled Codex skill in
-`.agents/skills/future-healthcare-cli/SKILL.md` to inspect the receipt, extract the required fields, and then run
-`future-healthcare submit` with explicit flags.
+Receipt data extraction happens before calling the CLI; inspect the receipt first and pass the extracted fields explicitly.
 
 ## Configuration
 

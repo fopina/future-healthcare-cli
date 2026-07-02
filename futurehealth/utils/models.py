@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel, ConfigDict
 
 
@@ -10,4 +8,3 @@ class ReceiptData(BaseModel):
     invoice_number: str
     total_amount: float
     date: str
-    personal_nif: Optional[str] = None

@@ -31,13 +31,11 @@ class TestModels(unittest.TestCase):
     def test_receipt_data_creation(self):
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount=100.50,
             date='2023-01-01',
         )
         self.assertEqual(data.business_nif, '123456789')
-        self.assertEqual(data.personal_nif, '987654321')
         self.assertEqual(data.invoice_number, 'INV001')
         self.assertEqual(data.total_amount, 100.50)
         self.assertEqual(data.date, '2023-01-01')
@@ -45,7 +43,6 @@ class TestModels(unittest.TestCase):
     def test_receipt_data_type_conversion(self):
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount='100.50',  # String should convert to float
             date='2023-01-01',
@@ -56,7 +53,6 @@ class TestModels(unittest.TestCase):
     def test_receipt_data_extra_fields(self):
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount=100.50,
             date='2023-01-01',
@@ -69,7 +65,6 @@ class TestModels(unittest.TestCase):
         with self.assertRaises(Exception):  # Pydantic validation error
             ReceiptData(
                 business_nif='123456789',
-                personal_nif='987654321',
                 invoice_number='INV001',
                 total_amount='not_a_number',  # Should fail conversion
                 date='2023-01-01',

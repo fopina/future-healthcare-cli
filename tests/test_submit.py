@@ -94,7 +94,6 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(reviewed_data.invoice_number, 'INV001')
         self.assertEqual(reviewed_data.total_amount, 100.50)
         self.assertEqual(reviewed_data.date, '2023-01-01')
-        self.assertIsNone(reviewed_data.personal_nif)
         mock_client_class.assert_called_once()
         mock_contract.validate_feature.assert_called_once_with('REFUNDS_SUBMISSION')
         mock_get_building.assert_called_once_with('123456789')
@@ -341,7 +340,6 @@ class TestSubmitCommand(unittest.TestCase):
 
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount=100.50,
             date='2023-01-01',
@@ -361,7 +359,6 @@ class TestSubmitCommand(unittest.TestCase):
 
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount=100.50,
             date='2023-01-01',
