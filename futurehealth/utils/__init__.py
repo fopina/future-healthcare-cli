@@ -1,46 +1,46 @@
-import json
-import re
 from pathlib import Path
 
-APP_NAME = 'future-healthcare-cli'
 TOKEN_FILENAME = 'token.txt'
-
-__all__ = ['read_pdf']
-
-
-def _user_config_path() -> Path:
-    from platformdirs import user_config_path
-
-    return user_config_path(APP_NAME)
+LOG_DIRNAME = 'logs'
 
 
-def read_pdf(*args, **kwargs):
+def config_dir(config_path: Path | str | None = None) -> Path:
+    if config_path is not None:
+        return Path(config_path).parent
+
+    from futurehealth.commands.cli import CLI
+
+    return CLI.CONFIG_DEFAULT_PATH.parent
+
+
+def _context_path(name: str) -> Path | None:
     try:
-        from .pdf import read_pdf as _read_pdf
-    except ModuleNotFoundError as exc:
-        raise SystemExit('Vision support requires optional dependencies. Install future-healthcare[vision].') from exc
+        import click
+    except ImportError:
+        return None
 
-    return _read_pdf(*args, **kwargs)
-
-
-def token_path() -> Path:
-    return _user_config_path() / TOKEN_FILENAME
-
-
-def logs_path() -> Path:
-    return _user_config_path() / 'logs'
+    ctx = click.get_current_context(silent=True)
+    while ctx is not None:
+        if name in ctx.meta:
+            return Path(ctx.meta[name])
+        ctx = ctx.parent
+    return None
 
 
-def parse_json_from_model(text: str) -> dict:
-    try:
-        return json.loads(text)
-    except Exception:
-        """try to extract from code fence"""
-        match = re.search(r'```(?:json)?\s*\n(.*?)\n```', text, re.DOTALL)
-        if match:
-            return json.loads(match.group(1))
-        # re-raise original one
-        raise
+def token_path(config_path: Path | str | None = None, override: Path | str | None = None) -> Path:
+    if override is not None:
+        return Path(override)
+    if context_value := _context_path('token_path'):
+        return context_value
+    return config_dir(config_path) / TOKEN_FILENAME
+
+
+def logs_path(config_path: Path | str | None = None, override: Path | str | None = None) -> Path:
+    if override is not None:
+        return Path(override)
+    if context_value := _context_path('log_dir'):
+        return context_value
+    return config_dir(config_path) / LOG_DIRNAME
 
 
 def validate_nif(nif: str) -> bool:

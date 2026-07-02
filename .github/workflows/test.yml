@@ -13,14 +13,34 @@ on:
       - dev-*
 
 jobs:
-  tests:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync --only-group lint
+
+      - name: Lint check
+        run: |
+          make lint-check
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -29,31 +49,18 @@ jobs:
           pip install uv
           uv sync --dev --extra cli
 
-      - name: Lint check
-        id: lint-check
-        # allow unit tests to run even if this fails
-        continue-on-error: true
-        run: |
-          make lint-check
-
       - name: Run unit tests
         run: |
           make test
-      
+
       - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-      
+
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           report_type: test_results
-
-      - name: Final check
-        if: ${{ steps.lint-check.outcome == 'failure' }}
-        run: |
-          echo Lint check failed, check its log
-          exit 1

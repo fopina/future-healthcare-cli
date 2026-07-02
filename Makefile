@@ -1,10 +1,10 @@
 lint:
-	uv run ruff format
-	uv run ruff check --fix
+	uv run --only-group lint ruff format
+	uv run --only-group lint ruff check --fix
 
 lint-check:
-	uv run ruff format --diff
-	uv run ruff check
+	uv run --only-group lint ruff format --diff
+	uv run --only-group lint ruff check
 
 sync:
 	uv sync --all-extras --dev

@@ -3,7 +3,6 @@
 # Click default_map-style command sections are supported:
 #
 # [submit]
-# openai_api_key = "..."
 # service = "Dentist"
 #
 # [login]
@@ -14,8 +13,13 @@
 #
 # default_env = "personal"
 #
+# Group-level local state paths can be configured here or passed as flags:
+#
+# token_path = "/path/to/token.txt"
+# log_dir = "/path/to/logs"
+#
 # [env.personal.submit]
-# openai_api_key = "..."
+# person = "Alice"
 #
 # [env.work.submit]
-# openai_api_key = "..."
+# person = "Bob"

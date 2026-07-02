@@ -26,24 +26,12 @@ uv tool install 'future-healthcare[cli]'
 
 This makes the `future-healthcare` command available on your system.
 
-If you want receipt parsing via OCR / vision models as well:
-
-```bash
-uv tool install 'future-healthcare[cli,vision]'
-```
-
 ## Run Without Installing
 
 You can also run it directly with `uvx`:
 
 ```bash
 uvx --from 'future-healthcare[cli]' future-healthcare --help
-```
-
-With vision support:
-
-```bash
-uvx --from 'future-healthcare[cli,vision]' future-healthcare submit --help
 ```
 
 ## Usage
@@ -70,13 +58,8 @@ future-healthcare submit ~/Downloads/example-receipt.pdf \
   --date '2026-03-14'
 ```
 
-Or let the CLI extract those fields from the receipt with vision support:
-
-```bash
-future-healthcare submit ~/Downloads/example-receipt.pdf --vision
-```
-
 The `submit` command may prompt you to choose the insured person, service, or building when multiple matches are available.
+Receipt data extraction happens before calling the CLI; inspect the receipt first and pass the extracted fields explicitly.
 
 ## Configuration
 
@@ -97,9 +80,7 @@ Configuration mirrors the CLI command options:
 
 ```toml
 [submit]
-openai_api_key = "..."
 service = "Dentist"
-vision = true
 
 [login]
 username = "YOUR_USERNAME"
@@ -111,24 +92,36 @@ You can also keep multiple environments in the same file and select one with `--
 default_env = "personal"
 
 [submit]
-openai_api_url = "https://api.venice.ai/api/v1"
+service = "Dentist"
 
 [env.personal.submit]
-openai_api_key = "..."
+person = "Alice"
 
 [env.work.submit]
-openai_api_key = "..."
+person = "Bob"
 ```
 
 Then run:
 
 ```bash
-future-healthcare --env work submit ~/Downloads/example-receipt.pdf --vision
+future-healthcare --env work submit ~/Downloads/example-receipt.pdf \
+  --business-nif 509876543 \
+  --invoice-number 'INV 2026/0001' \
+  --total-amount 40 \
+  --date '2026-03-14'
+```
+
+Use group-level path flags when you want local state somewhere else:
+
+```bash
+future-healthcare --token-path ~/.future-healthcare/token.txt --log-dir ~/.future-healthcare/logs login \
+  -u YOUR_USERNAME \
+  -p YOUR_PASSWORD
 ```
 
 ## Local Data
 
-The CLI stores local state under platform-specific user directories, including:
+By default, the CLI stores local state next to the selected configuration file, including:
 
 - `token.txt` for the login token
 - `config.toml` for CLI defaults

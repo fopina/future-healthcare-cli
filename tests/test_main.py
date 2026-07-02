@@ -1,12 +1,17 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
+
+from click.testing import CliRunner
 
 from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands import login
 from futurehealth.commands._mixins import ContractMixin, TokenMixin
+from futurehealth.commands.beneficiaries import Beneficiaries
 from futurehealth.commands.cli import CLI
 from futurehealth.commands.config import Config
-from futurehealth.utils import prompts
+from futurehealth.commands.services import Services
 from futurehealth.utils.models import ReceiptData
 
 
@@ -26,13 +31,11 @@ class TestModels(unittest.TestCase):
     def test_receipt_data_creation(self):
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount=100.50,
             date='2023-01-01',
         )
         self.assertEqual(data.business_nif, '123456789')
-        self.assertEqual(data.personal_nif, '987654321')
         self.assertEqual(data.invoice_number, 'INV001')
         self.assertEqual(data.total_amount, 100.50)
         self.assertEqual(data.date, '2023-01-01')
@@ -40,7 +43,6 @@ class TestModels(unittest.TestCase):
     def test_receipt_data_type_conversion(self):
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount='100.50',  # String should convert to float
             date='2023-01-01',
@@ -51,7 +53,6 @@ class TestModels(unittest.TestCase):
     def test_receipt_data_extra_fields(self):
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount=100.50,
             date='2023-01-01',
@@ -64,7 +65,6 @@ class TestModels(unittest.TestCase):
         with self.assertRaises(Exception):  # Pydantic validation error
             ReceiptData(
                 business_nif='123456789',
-                personal_nif='987654321',
                 invoice_number='INV001',
                 total_amount='not_a_number',  # Should fail conversion
                 date='2023-01-01',
@@ -187,39 +187,59 @@ class TestCommands(unittest.TestCase):
         with self.assertRaises(Exception):  # Should raise ClickException
             cmd()
 
+    @patch('futurehealth.client.Client')
+    def test_group_token_path_option_controls_login_storage(self, mock_client_class):
+        """Test login writes to the group-level token path."""
+        mock_client_class.return_value.login.return_value = {'body': {'token': 'auth_token'}}
 
-class TestPrompts(unittest.TestCase):
-    def test_system_prompt_exists(self):
-        """Test that SYSTEM_PROMPT is defined and not empty."""
-        self.assertTrue(hasattr(prompts, 'SYSTEM_PROMPT'))
-        self.assertIsInstance(prompts.SYSTEM_PROMPT, str)
-        self.assertGreater(len(prompts.SYSTEM_PROMPT), 0)
+        with TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / 'config.toml'
+            token_file = tmp_path / 'tokens' / 'token.txt'
 
-    def test_user_text_prompt_exists(self):
-        """Test that USER_TEXT_PROMPT is defined and not empty."""
-        self.assertTrue(hasattr(prompts, 'USER_TEXT_PROMPT'))
-        self.assertIsInstance(prompts.USER_TEXT_PROMPT, str)
-        self.assertGreater(len(prompts.USER_TEXT_PROMPT), 0)
+            result = CliRunner().invoke(
+                CLI.click,
+                [
+                    '--config',
+                    str(config_path),
+                    '--token-path',
+                    str(token_file),
+                    'login',
+                    '-u',
+                    'user',
+                    '-p',
+                    'pass',
+                ],
+            )
 
-    def test_user_vision_prompt_exists(self):
-        """Test that USER_VISION_PROMPT is defined and not empty."""
-        self.assertTrue(hasattr(prompts, 'USER_VISION_PROMPT'))
-        self.assertIsInstance(prompts.USER_VISION_PROMPT, str)
-        self.assertGreater(len(prompts.USER_VISION_PROMPT), 0)
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertEqual(token_file.read_text(), 'auth_token')
 
-    def test_prompts_contain_key_instructions(self):
-        """Test that prompts contain expected key instructions."""
-        self.assertIn('business_nif', prompts.USER_TEXT_PROMPT)
-        self.assertIn('personal_nif', prompts.USER_TEXT_PROMPT)
-        self.assertIn('invoice_number', prompts.USER_TEXT_PROMPT)
-        self.assertIn('total_amount', prompts.USER_TEXT_PROMPT)
-        self.assertIn('date', prompts.USER_TEXT_PROMPT)
+    @patch('futurehealth.client.Client')
+    def test_login_token_path_defaults_next_to_config(self, mock_client_class):
+        """Test login stores the token next to the selected config file by default."""
+        mock_client_class.return_value.login.return_value = {'body': {'token': 'auth_token'}}
 
-        self.assertIn('business_nif', prompts.USER_VISION_PROMPT)
-        self.assertIn('personal_nif', prompts.USER_VISION_PROMPT)
-        self.assertIn('invoice_number', prompts.USER_VISION_PROMPT)
-        self.assertIn('total_amount', prompts.USER_VISION_PROMPT)
-        self.assertIn('date', prompts.USER_VISION_PROMPT)
+        with TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / 'nested' / 'config.toml'
+            token_file = config_path.parent / 'token.txt'
+
+            result = CliRunner().invoke(
+                CLI.click,
+                [
+                    '--config',
+                    str(config_path),
+                    'login',
+                    '-u',
+                    'user',
+                    '-p',
+                    'pass',
+                ],
+            )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertEqual(token_file.read_text(), 'auth_token')
 
 
 class TestMain(unittest.TestCase):
@@ -236,6 +256,10 @@ class TestMain(unittest.TestCase):
         """Test the app exposes the ClassyClick config command."""
         self.assertIs(CLI.click.commands['config'], Config.click)
 
-    def test_config_masks_openai_api_key(self):
-        """Test the app-specific OpenAI API key is treated as secret config."""
-        self.assertEqual(Config._mask_value('openai_api_key', 'secret'), Config.MASKED)
+    def test_cli_registers_services_command(self):
+        """Test the app exposes the services command."""
+        self.assertIs(CLI.click.commands['services'], Services.click)
+
+    def test_cli_registers_beneficiaries_command(self):
+        """Test the app exposes the beneficiaries command."""
+        self.assertIs(CLI.click.commands['beneficiaries'], Beneficiaries.click)

@@ -20,15 +20,8 @@ class TestSubmitCommand(unittest.TestCase):
             invoice_number='INV-1',
             total_amount=12.5,
             date='2023-01-01',
-            vision=False,
             person='John',
             service='Medical',
-            openai_api_key='test_key',
-            openai_api_url='https://test.api',
-            openai_model_vision='test-vision',
-            openai_model_text='test-text',
-            force_vision=False,
-            vision_dpi=200,
             debug=True,
         )
 
@@ -37,19 +30,11 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(submit.invoice_number, 'INV-1')
         self.assertEqual(submit.total_amount, 12.5)
         self.assertEqual(submit.date, '2023-01-01')
-        self.assertFalse(submit.vision)
         self.assertEqual(submit.person, 'John')
         self.assertEqual(submit.service, 'Medical')
-        self.assertEqual(submit.openai_api_key, 'test_key')
-        self.assertEqual(submit.openai_api_url, 'https://test.api')
-        self.assertEqual(submit.openai_model_vision, 'test-vision')
-        self.assertEqual(submit.openai_model_text, 'test-text')
-        self.assertFalse(submit.force_vision)
-        self.assertEqual(submit.vision_dpi, 200)
         self.assertTrue(submit.debug)
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
-    @patch('futurehealth.commands.submit.Submit.parse_receipt')
     @patch('futurehealth.commands.submit.Submit.get_building')
     @patch('futurehealth.commands.submit.Submit.get_service')
     @patch('futurehealth.commands.submit.Submit.get_person')
@@ -64,7 +49,6 @@ class TestSubmitCommand(unittest.TestCase):
         mock_get_person,
         mock_get_service,
         mock_get_building,
-        mock_parse_receipt,
         mock_setup_logging,
     ):
         """Test the complete submit workflow."""
@@ -105,13 +89,11 @@ class TestSubmitCommand(unittest.TestCase):
 
         # Verify calls
         mock_setup_logging.assert_called_once()
-        mock_parse_receipt.assert_not_called()
         reviewed_data = mock_review.call_args[0][0]
         self.assertEqual(reviewed_data.business_nif, '123456789')
         self.assertEqual(reviewed_data.invoice_number, 'INV001')
         self.assertEqual(reviewed_data.total_amount, 100.50)
         self.assertEqual(reviewed_data.date, '2023-01-01')
-        self.assertIsNone(reviewed_data.personal_nif)
         mock_client_class.assert_called_once()
         mock_contract.validate_feature.assert_called_once_with('REFUNDS_SUBMISSION')
         mock_get_building.assert_called_once_with('123456789')
@@ -133,10 +115,9 @@ class TestSubmitCommand(unittest.TestCase):
         )
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
-    @patch('futurehealth.commands.submit.Submit.parse_receipt')
     @patch('futurehealth.commands.submit.Submit.review_data')
     @patch('futurehealth.commands._mixins.Client')
-    def test_submit_feature_not_available(self, mock_client_class, mock_review, mock_parse_receipt, mock_setup_logging):
+    def test_submit_feature_not_available(self, mock_client_class, mock_review, mock_setup_logging):
         """Test submit when REFUNDS_SUBMISSION feature is not available."""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
@@ -160,13 +141,10 @@ class TestSubmitCommand(unittest.TestCase):
             submit()
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
-    @patch('futurehealth.commands.submit.Submit.parse_receipt')
     @patch('futurehealth.commands.submit.Submit.review_data')
     @patch('futurehealth.commands._mixins.Client')
-    def test_submit_requires_flags_or_vision(
-        self, mock_client_class, mock_review, mock_parse_receipt, mock_setup_logging
-    ):
-        """Test submit validates required CLI fields when vision is disabled."""
+    def test_submit_requires_receipt_fields(self, mock_client_class, mock_review, mock_setup_logging):
+        """Test submit validates required CLI fields."""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
 
@@ -189,26 +167,10 @@ class TestSubmitCommand(unittest.TestCase):
         ):
             submit.validate_required_receipt_fields()
 
-        mock_parse_receipt.assert_not_called()
         mock_review.assert_not_called()
 
-    @patch('futurehealth.commands.submit.Submit.parse_receipt')
-    def test_get_receipt_data_uses_vision_when_enabled(self, mock_parse_receipt):
-        """Test receipt data comes from OCR only when vision is enabled."""
-        mock_data = ReceiptData(
-            business_nif='123456789', invoice_number='INV001', total_amount=100.50, date='2023-01-01'
-        )
-        mock_parse_receipt.return_value = mock_data
-
-        submit = Submit(receipt_file=Path('test.pdf'), vision=True)
-
-        result = submit.get_receipt_data()
-
-        self.assertEqual(result, mock_data)
-        mock_parse_receipt.assert_called_once()
-
     def test_get_receipt_data_uses_flags_by_default(self):
-        """Test receipt data comes from CLI flags when vision is disabled."""
+        """Test receipt data comes from CLI flags."""
         submit = Submit(
             receipt_file=Path('test.pdf'),
             business_nif='123456789',
@@ -224,83 +186,6 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(result.invoice_number, 'INV001')
         self.assertEqual(result.total_amount, 100.50)
         self.assertEqual(result.date, '2023-01-01')
-
-    @patch('futurehealth.commands.submit.utils.read_pdf')
-    @patch('futurehealth.commands.submit.OpenAI')
-    def test_parse_receipt_text_mode(self, mock_openai_class, mock_read_pdf):
-        """Test parse_receipt in text mode."""
-        # Mock PDF reading - return text content
-        mock_read_pdf.return_value = [{'type': 'text', 'text': 'Sample receipt text'}]
-
-        # Mock OpenAI client
-        mock_client = MagicMock()
-        mock_openai_class.return_value = mock_client
-
-        mock_completion = MagicMock()
-        mock_completion.choices = [MagicMock()]
-        mock_completion.choices[
-            0
-        ].message.content = '{"business_nif": "123456789", "personal_nif": "987654321", "invoice_number": "INV001", "total_amount": "100.50", "date": "01/01/2023"}'
-        mock_completion.usage = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_completion
-
-        submit = Submit(receipt_file=Path('test.pdf'))
-        submit.file_logger = MagicMock()
-        submit.console_logger = MagicMock()
-        submit.openai_api_key = 'test_key'
-        submit.openai_api_url = 'https://test.api'
-        submit.openai_model_text = 'test-model'
-
-        result = submit.parse_receipt()
-
-        self.assertIsInstance(result, ReceiptData)
-        self.assertEqual(result.business_nif, '123456789')
-        self.assertEqual(result.personal_nif, '987654321')
-        self.assertEqual(result.invoice_number, 'INV001')
-        self.assertEqual(result.total_amount, 100.50)
-        self.assertEqual(result.date, '2023-01-01')  # Should be reformatted
-
-        # Verify OpenAI call
-        mock_client.chat.completions.create.assert_called_once()
-        call_args = mock_client.chat.completions.create.call_args
-        self.assertEqual(call_args[1]['model'], 'test-model')
-        self.assertEqual(len(call_args[1]['messages']), 2)  # system + user
-
-    @patch('futurehealth.commands.submit.utils.read_pdf')
-    @patch('futurehealth.commands.submit.OpenAI')
-    def test_parse_receipt_vision_mode(self, mock_openai_class, mock_read_pdf):
-        """Test parse_receipt in vision mode."""
-        # Mock PDF reading - return image content
-        mock_read_pdf.return_value = [{'type': 'image_url', 'image_url': {'url': 'data:image/png;base64,test'}}]
-
-        # Mock OpenAI client
-        mock_client = MagicMock()
-        mock_openai_class.return_value = mock_client
-
-        mock_completion = MagicMock()
-        mock_completion.choices = [MagicMock()]
-        mock_completion.choices[
-            0
-        ].message.content = '{"business_nif": "123456789", "personal_nif": "987654321", "invoice_number": "INV001", "total_amount": "100.50", "date": "01/01/2023"}'
-        mock_completion.usage = MagicMock()
-        mock_client.chat.completions.create.return_value = mock_completion
-
-        submit = Submit(receipt_file=Path('test.pdf'))
-        submit.file_logger = MagicMock()
-        submit.console_logger = MagicMock()
-        submit.openai_api_key = 'test_key'
-        submit.openai_api_url = 'https://test.api'
-        submit.openai_model_vision = 'vision-model'
-        submit.force_vision = False
-
-        result = submit.parse_receipt()
-
-        self.assertIsInstance(result, ReceiptData)
-        self.assertEqual(result.business_nif, '123456789')
-
-        # Verify vision model was used
-        call_args = mock_client.chat.completions.create.call_args
-        self.assertEqual(call_args[1]['model'], 'vision-model')
 
     def test_get_service_single_match(self):
         """Test get_service with single match."""
@@ -455,7 +340,6 @@ class TestSubmitCommand(unittest.TestCase):
 
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount=100.50,
             date='2023-01-01',
@@ -475,7 +359,6 @@ class TestSubmitCommand(unittest.TestCase):
 
         data = ReceiptData(
             business_nif='123456789',
-            personal_nif='987654321',
             invoice_number='INV001',
             total_amount=100.50,
             date='2023-01-01',

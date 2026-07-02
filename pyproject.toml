@@ -19,21 +19,18 @@ cli = [
     "classyclick>=1.0.0",
     "platformdirs>=4",
 ]
-vision = [
-    "pillow>=10",
-    "openai>=1",
-    "pymupdf>=1.24",
-]
-
 [project.scripts]
 future-healthcare = "futurehealth.__main__:main"
 
 [dependency-groups]
+lint = [
+    "ruff",
+]
 dev = [
+    { include-group = "lint" },
     "pytest",
     "pytest-cov",
     "pytest-socket",
-    "ruff",
     "twine",
 ]
 
