@@ -30,8 +30,6 @@ or Future Healthcare API endpoints directly from agent code.
    model provider. Inspect the receipt yourself and produce these fields:
 
    - `business_nif`: Portuguese business NIF, exactly 9 digits, usually starting with `5`.
-   - `personal_nif`: beneficiary or customer NIF, exactly 9 digits, usually not starting with `5`. This is not
-     passed directly to `submit`, but it can help match the right insured person when beneficiaries are listed.
    - `invoice_number`: receipt or invoice number, often beginning with `FR`, `FT`, `RC`, or a similar prefix.
    - `total_amount`: total amount paid as a number, without currency symbols.
    - `date`: treatment or payment date. Prefer `YYYY-MM-DD` when possible.
@@ -45,16 +43,18 @@ or Future Healthcare API endpoints directly from agent code.
    future-healthcare services
    ```
 
-   Use the first name found on the invoice to select the matching beneficiary from the `beneficiaries` output when
-   possible. If the first name is missing, ambiguous, or does not clearly match exactly one listed beneficiary, ask the
-   user which person to use.
+   Use the `beneficiaries` output as the source of valid `--person` values. Compare all person names found on the
+   invoice, receipt, customer block, and beneficiary block against the listed beneficiaries. Prefer an exact full-name
+   match; otherwise accept a clear partial-name match only when it identifies exactly one listed beneficiary. If no
+   invoice name matches a listed beneficiary, or if the match is ambiguous, ask the user which listed beneficiary name
+   to use for the `--person` flag.
 
    Pick the `--service` value from that list. If the receipt does not confidently map to one listed service, ask the
    user which service to use.
 
 5. Before calling `future-healthcare submit`, show the extracted values and assumed routing choices to the user and ask
-   them to confirm they are correct. Include `business_nif`, `personal_nif` if found, `invoice_number`,
-   `total_amount`, `date`, assumed `person`, assumed `service`, whether `--primary-entity` will be used, and the invoice
+   them to confirm they are correct. Include `business_nif`, `invoice_number`, `total_amount`, `date`, assumed
+   `person`, assumed `service`, whether `--primary-entity` will be used, and the invoice
    file path that will be used as `RECEIPT_FILE`. Also ask whether there are any extra supporting files to attach after
    the invoice. If the detected service from the invoice is `Medicamentos`, explicitly ask for the prescription file;
    this extra prescription attachment is mandatory for `Medicamentos` submissions. If any field is missing, unclear, or
@@ -103,8 +103,7 @@ or Future Healthcare API endpoints directly from agent code.
    service, ask the user whether `--primary-entity` applies before submitting.
 
 10. If the command prompts for insured person, service, building, or review corrections, answer from user-provided
-   context. When beneficiaries are listed, use the extracted `personal_nif` to help identify the matching person when
-   available. When context is missing, ask the user.
+   context. When context is missing, ask the user.
 
 11. If `submit` fails after one or more documents were uploaded, do not try to reuse or clean up the uploaded document
    GUIDs. After fixing the required parameters, run `future-healthcare submit` again normally and let the CLI upload the
