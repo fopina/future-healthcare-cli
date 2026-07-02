@@ -157,10 +157,13 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         self.console_logger.debug(f'Starting submission for file: {self.receipt_file}')
 
         # Copy input files to logs directory with prefix
-        for file in [self.receipt_file] + list(self.other_attachments):
+        files_to_copy = [('Invoice/receipt file', self.receipt_file)] + [
+            ('Supporting attachment file', attachment) for attachment in self.other_attachments or []
+        ]
+        for file_label, file in files_to_copy:
             file_copy = logs_dir / f'{prefix}_{file.name}'
             shutil.copy2(file, file_copy)
-            self.console_logger.debug(f'Receipt file copied to: {file_copy}')
+            self.console_logger.debug('%s copied to: %s', file_label, file_copy)
 
     @cached_property
     def refunds_request_setup(self):

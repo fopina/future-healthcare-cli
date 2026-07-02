@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -168,6 +169,33 @@ class TestSubmitCommand(unittest.TestCase):
             submit.validate_required_receipt_fields()
 
         mock_review.assert_not_called()
+
+    def test_setup_logging_labels_copied_input_files(self):
+        """Test setup_logging labels invoice and attachment copies clearly."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            invoice = tmp_path / 'invoice.pdf'
+            prescription = tmp_path / 'prescription.pdf'
+            logs_dir = tmp_path / 'logs'
+            invoice.write_text('invoice')
+            prescription.write_text('prescription')
+
+            submit = Submit(receipt_file=invoice, other_attachments=[prescription], debug=True)
+
+            try:
+                with patch('futurehealth.commands.submit.utils.logs_path', return_value=logs_dir):
+                    submit.setup_logging()
+
+                log_text = ''.join(log_file.read_text() for log_file in logs_dir.glob('*.log'))
+                self.assertIn('Invoice/receipt file copied to:', log_text)
+                self.assertIn('Supporting attachment file copied to:', log_text)
+                self.assertIn('_invoice.pdf', log_text)
+                self.assertIn('_prescription.pdf', log_text)
+            finally:
+                for logger in (submit.file_logger, submit.console_logger):
+                    for handler in list(logger.handlers):
+                        logger.removeHandler(handler)
+                        handler.close()
 
     def test_get_receipt_data_uses_flags_by_default(self):
         """Test receipt data comes from CLI flags."""

@@ -13,7 +13,11 @@ or Future Healthcare API endpoints directly from agent code.
 
 ## Submit Workflow
 
-1. Make sure the user is logged in. Do not ask for, accept, or pass credentials via chat. Credentials must be
+1. When a submission is requested or started, the first file shared by the user must be the invoice/receipt. Treat that
+   first file as the `RECEIPT_FILE` positional argument to `future-healthcare submit`. Any extra files are supporting
+   attachments and must be passed as positional arguments after the invoice/receipt path.
+
+2. Make sure the user is logged in. Do not ask for, accept, or pass credentials via chat. Credentials must be
    configured outside the conversation with the CLI configuration command. To inspect or edit the local config, tell
    the caller to use:
 
@@ -22,7 +26,8 @@ or Future Healthcare API endpoints directly from agent code.
    future-healthcare config --edit
    ```
 
-2. Extract receipt metadata before calling the CLI. The CLI does not read receipts with a model provider. Inspect the receipt yourself and produce these fields:
+3. Extract receipt metadata from the invoice/receipt before calling the CLI. The CLI does not read receipts with a
+   model provider. Inspect the receipt yourself and produce these fields:
 
    - `business_nif`: Portuguese business NIF, exactly 9 digits, usually starting with `5`.
    - `personal_nif`: beneficiary or customer NIF, exactly 9 digits, usually not starting with `5`. This is not
@@ -33,7 +38,7 @@ or Future Healthcare API endpoints directly from agent code.
    - `person`: the assumed insured person name for `--person`, chosen from `future-healthcare beneficiaries`.
    - `service`: the assumed service name for `--service`, chosen from `future-healthcare services`.
 
-3. Always list the available beneficiaries and submission services before running `submit`:
+4. Always list the available beneficiaries and submission services before running `submit`:
 
    ```bash
    future-healthcare beneficiaries
@@ -47,13 +52,16 @@ or Future Healthcare API endpoints directly from agent code.
    Pick the `--service` value from that list. If the receipt does not confidently map to one listed service, ask the
    user which service to use.
 
-4. Before calling `future-healthcare submit`, show the extracted values and assumed routing choices to the user and ask
+5. Before calling `future-healthcare submit`, show the extracted values and assumed routing choices to the user and ask
    them to confirm they are correct. Include `business_nif`, `personal_nif` if found, `invoice_number`,
-   `total_amount`, `date`, assumed `person`, assumed `service`, and whether `--primary-entity` will be used. If any
-   field is missing, unclear, or likely misread, ask the user to provide or correct it. Do not guess NIFs, dates,
-   invoice numbers, totals, person names, or service names.
+   `total_amount`, `date`, assumed `person`, assumed `service`, whether `--primary-entity` will be used, and the invoice
+   file path that will be used as `RECEIPT_FILE`. Also ask whether there are any extra supporting files to attach after
+   the invoice. If the detected service from the invoice is `Medicamentos`, explicitly ask for the prescription file;
+   this extra prescription attachment is mandatory for `Medicamentos` submissions. If any field is missing, unclear, or
+   likely misread, ask the user to provide or correct it. Do not guess NIFs, dates, invoice numbers, totals, person
+   names, service names, or supporting attachment paths.
 
-5. Run the CLI with explicit values:
+6. Run the CLI with explicit values:
 
    ```bash
    future-healthcare submit /path/to/receipt.pdf \
@@ -63,7 +71,7 @@ or Future Healthcare API endpoints directly from agent code.
      --date '2026-03-14'
    ```
 
-6. Pass optional routing hints when known:
+7. Pass optional routing hints when known:
 
    ```bash
    future-healthcare submit /path/to/receipt.pdf \
@@ -75,20 +83,34 @@ or Future Healthcare API endpoints directly from agent code.
      --service 'Dentist'
    ```
 
-7. If the selected service is `Medicamentos`, include `--primary-entity`; the company requires medicines to have
+8. Pass extra supporting attachments as positional arguments immediately after the invoice/receipt path and before any
+   options. For example:
+
+   ```bash
+   future-healthcare submit /path/to/invoice.pdf /path/to/prescription.pdf \
+     --business-nif 509876543 \
+     --invoice-number 'INV 2026/0001' \
+     --total-amount 40 \
+     --date '2026-03-14' \
+     --person 'Alice' \
+     --service 'Medicamentos' \
+     --primary-entity
+   ```
+
+9. If the selected service is `Medicamentos`, include `--primary-entity`; the company requires medicines to have
    already been paid by the state as well. For other services, do not include `--primary-entity` by default. If the
    invoice or user context suggests another entity, subsidy, copayment, or prior coverage for a non-`Medicamentos`
    service, ask the user whether `--primary-entity` applies before submitting.
 
-8. If the command prompts for insured person, service, building, or review corrections, answer from user-provided
+10. If the command prompts for insured person, service, building, or review corrections, answer from user-provided
    context. When beneficiaries are listed, use the extracted `personal_nif` to help identify the matching person when
    available. When context is missing, ask the user.
 
-9. If `submit` fails after one or more documents were uploaded, do not try to reuse or clean up the uploaded document
+11. If `submit` fails after one or more documents were uploaded, do not try to reuse or clean up the uploaded document
    GUIDs. After fixing the required parameters, run `future-healthcare submit` again normally and let the CLI upload the
    documents again with new GUIDs.
 
-10. If `future-healthcare check` or `future-healthcare submit` fails because the session is missing or invalid, ask the
+12. If `future-healthcare check` or `future-healthcare submit` fails because the session is missing or invalid, ask the
    user for approval to refresh the session, then run `login` without parameters:
 
    ```bash
@@ -142,7 +164,8 @@ workflow.
 
 ## Notes
 
-- Attachments after the receipt path are uploaded as supporting documents.
+- The invoice/receipt path is always the first positional argument to `submit`; attachments after the receipt path are
+  uploaded as supporting documents.
 - The CLI stores tokens, config, logs, and copied submission inputs under its platform-specific user config directory.
 - Do not pass API keys or model-provider settings to this CLI; receipt understanding belongs to the agent before invocation.
 - Never collect or transmit Future Healthcare username/password values through chat. Use saved CLI config plus
