@@ -85,4 +85,6 @@ class Check(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                 f'{claim.date_of_treatment} ({refund.expense_date})[{claim.service_name}] - {refund.person_name} - {claim.total_copayment} + {received_str} = {refund.total_value}'
             )
         else:
-            click.echo(f'{refund.expense_date} [{refund.type}] - {refund.person_name} - {refund.status} = {refund.total_value}')
+            click.echo(
+                f'{refund.expense_date} [{refund.type}] - {refund.person_name} - {refund.status} = {refund.total_value}'
+            )
