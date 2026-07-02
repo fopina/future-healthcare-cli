@@ -1,19 +1,14 @@
-import tomllib
+from pathlib import Path
 
 import classyclick
 
-from ..utils import config_path
 
-
-def load_config() -> dict:
-    path = config_path()
-    if not path.exists():
-        return {}
-    with path.open('rb') as f:
-        return tomllib.load(f)
-
-
-class CLI(classyclick.Group):
+class CLI(classyclick.helpers.ConfigFileMixin, classyclick.Group):
     """CLI for Future Healthcare"""
 
-    __config__ = classyclick.Group.Config(context_settings={'default_map': load_config()})
+    CONFIG_EXAMPLE_PATH = Path(__file__).with_name('config.example.toml')
+
+    __config__ = classyclick.Group.Config(context_settings={'show_default': True})
+
+    def __call__(self):
+        self.load_config()

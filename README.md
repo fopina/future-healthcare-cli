@@ -78,9 +78,57 @@ future-healthcare submit ~/Downloads/example-receipt.pdf --vision
 
 The `submit` command may prompt you to choose the insured person, service, or building when multiple matches are available.
 
+## Configuration
+
+The CLI reads defaults from ClassyClick's default `config.toml` location.
+You can inspect the active configuration and its file path with:
+
+```bash
+future-healthcare config
+```
+
+To edit it in `$VISUAL` or `$EDITOR`:
+
+```bash
+future-healthcare config --edit
+```
+
+Configuration mirrors the CLI command options:
+
+```toml
+[submit]
+openai_api_key = "..."
+service = "Dentist"
+vision = true
+
+[login]
+username = "YOUR_USERNAME"
+```
+
+You can also keep multiple environments in the same file and select one with `--env`:
+
+```toml
+default_env = "personal"
+
+[submit]
+openai_api_url = "https://api.venice.ai/api/v1"
+
+[env.personal.submit]
+openai_api_key = "..."
+
+[env.work.submit]
+openai_api_key = "..."
+```
+
+Then run:
+
+```bash
+future-healthcare --env work submit ~/Downloads/example-receipt.pdf --vision
+```
+
 ## Local Data
 
-The CLI stores local state under the platform-specific config directory for `future-healthcare-cli`, including:
+The CLI stores local state under platform-specific user directories, including:
 
 - `token.txt` for the login token
 - `config.toml` for CLI defaults

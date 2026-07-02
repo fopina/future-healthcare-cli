@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 
 APP_NAME = 'future-healthcare-cli'
-CONFIG_FILENAME = 'config.toml'
 TOKEN_FILENAME = 'token.txt'
 
 __all__ = ['read_pdf']
@@ -22,10 +21,6 @@ def read_pdf(*args, **kwargs):
         raise SystemExit('Vision support requires optional dependencies. Install future-healthcare[vision].') from exc
 
     return _read_pdf(*args, **kwargs)
-
-
-def config_path() -> Path:
-    return _user_config_path() / CONFIG_FILENAME
 
 
 def token_path() -> Path:

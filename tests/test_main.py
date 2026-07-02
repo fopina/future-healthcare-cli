@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands import login
 from futurehealth.commands._mixins import ContractMixin, TokenMixin
+from futurehealth.commands.cli import CLI
+from futurehealth.commands.config import Config
 from futurehealth.utils import prompts
 from futurehealth.utils.models import ReceiptData
 
@@ -229,3 +231,11 @@ class TestMain(unittest.TestCase):
         futurehealth.__main__.main()
 
         mock_cli.assert_called_once()
+
+    def test_cli_registers_config_command(self):
+        """Test the app exposes the ClassyClick config command."""
+        self.assertIs(CLI.click.commands['config'], Config.click)
+
+    def test_config_masks_openai_api_key(self):
+        """Test the app-specific OpenAI API key is treated as secret config."""
+        self.assertEqual(Config._mask_value('openai_api_key', 'secret'), Config.MASKED)
