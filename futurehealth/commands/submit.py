@@ -10,15 +10,9 @@ import click
 
 from .. import client, utils
 from ..client.models import Building
-from ..utils import prompts
 from ..utils.models import ReceiptData
 from . import _mixins
 from .cli import CLI
-
-try:
-    from openai import OpenAI
-except ModuleNotFoundError:
-    OpenAI = None
 
 
 class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
@@ -26,11 +20,10 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
 
     receipt_file: Path = classyclick.Argument()
     other_attachments: list[Path] = classyclick.Argument(nargs=-1, type=Path)
-    business_nif: str = classyclick.Option(help='Business NIF from the receipt. Ignored if --vision is used')
-    invoice_number: str = classyclick.Option(help='Invoice or receipt number. Ignored if --vision is used')
-    total_amount: float = classyclick.Option(help='Total amount paid. Ignored if --vision is used')
-    date: str = classyclick.Option(help='Treatment/payment date from the receipt. Ignored if --vision is used')
-    vision: bool = classyclick.Option(help='Use OCR/Vision to extract required receipt fields')
+    business_nif: str = classyclick.Option(help='Business NIF from the receipt')
+    invoice_number: str = classyclick.Option(help='Invoice or receipt number')
+    total_amount: float = classyclick.Option(help='Total amount paid')
+    date: str = classyclick.Option(help='Treatment/payment date from the receipt')
 
     person: str = classyclick.Option(
         '-p', help='Name of the insured person. If not specified or multiple matches, it will be prompted interactively'
@@ -38,28 +31,6 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     service: str = classyclick.Option(
         '-s',
         help='Name of the service to request refund. If not specified or multiple matches, it will be prompted interactively',
-    )
-    openai_api_key: str = classyclick.Option(
-        help='API key to access the OpenAI-compatible service to read the receipts'
-    )
-    openai_api_url: str = classyclick.Option(
-        default='https://api.venice.ai/api/v1',
-        help='API base url of the OpenAI-compatible service to read the receipts',
-    )
-    # currently, in venice.ai, this same prompt is cheaper with Vision than with text???
-    # same model used for both as it is indeed currently the cheapest for anything in venice.ai
-    openai_model_vision: str = classyclick.Option(
-        default='google-gemma-3-27b-it', help='Model to use when receipts are in image format or scanned PDF'
-    )
-    openai_model_text: str = classyclick.Option(
-        default='google-gemma-3-27b-it', help='Model to use when receipts are in text-based PDF'
-    )
-    force_vision: bool = classyclick.Option(
-        help='If receipt is not an image, convert it anyway - only useful if Vision model is cheaper or performs better...'
-    )
-    vision_dpi: int = classyclick.Option(
-        default=200,
-        help='When converting PDF to image, use this DPI. Higher DPI should yield higher cost but more accuracy.',
     )
     debug: bool = classyclick.Option(help='Enable debug logging')
     primary_entity: bool = classyclick.Option(
@@ -113,9 +84,6 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         self.console_logger.info('Submission completed')
 
     def get_receipt_data(self):
-        if self.vision:
-            return self.parse_receipt()
-
         self.validate_required_receipt_fields()
         data = ReceiptData(
             business_nif=self.business_nif,
@@ -141,46 +109,9 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         if missing:
             joined = ', '.join(missing)
             raise click.ClickException(
-                f'Missing required receipt fields: {joined}. Pass them explicitly or use --vision.'
+                f'Missing required receipt fields: {joined}. Extract them before calling this command and pass them '
+                'explicitly.'
             )
-
-    def parse_receipt(self):
-        if OpenAI is None:
-            raise click.ClickException(
-                'Vision support requires optional dependencies. Install future-healthcare[vision].'
-            )
-
-        pdf_content = utils.read_pdf(self.receipt_file, force_vision=self.force_vision, dpi=self.vision_dpi)
-
-        client = OpenAI(
-            api_key=self.openai_api_key,
-            base_url=self.openai_api_url,
-        )
-
-        messages = []
-        if prompts.SYSTEM_PROMPT:
-            messages.append({'role': 'system', 'content': prompts.SYSTEM_PROMPT})
-        if pdf_content[0]['type'] == 'text':
-            self.console_logger.debug('Using text model - %s', self.openai_model_text)
-            model = self.openai_model_text
-            messages.append(
-                {'role': 'user', 'content': [{'type': 'text', 'text': prompts.USER_TEXT_PROMPT}] + pdf_content}
-            )
-        else:
-            self.console_logger.debug('Using vision model - %s', self.openai_model_vision)
-            model = self.openai_model_vision
-            messages.append(
-                {'role': 'user', 'content': [{'type': 'text', 'text': prompts.USER_VISION_PROMPT}] + pdf_content}
-            )
-        completion = client.chat.completions.create(model=model, messages=messages, max_completion_tokens=500)
-
-        message = completion.choices[0].message.content
-        self.console_logger.debug(f'Parsed receipt details: {message}')
-        data = ReceiptData(**utils.parse_json_from_model(message))
-        data.date = self.normalize_date(data.date)
-        self.console_logger.debug(f'Tokens used: {completion.usage}')
-        self.console_logger.debug(f'Parsed data (before review): {data}')
-        return data
 
     def normalize_date(self, value: str) -> str:
         # It's either YEAR MM DD or DD MM YEAR (no US format), easy to detect.
