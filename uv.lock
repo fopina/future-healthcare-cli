@@ -433,6 +433,9 @@ dev = [
     { name = "ruff" },
     { name = "twine" },
 ]
+lint = [
+    { name = "ruff" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -451,6 +454,7 @@ dev = [
     { name = "ruff" },
     { name = "twine" },
 ]
+lint = [{ name = "ruff" }]
 
 [[package]]
 name = "id"
