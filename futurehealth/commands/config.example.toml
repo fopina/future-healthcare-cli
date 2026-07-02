@@ -1,0 +1,21 @@
+# This file mirrors the CLI's command options.
+#
+# Click default_map-style command sections are supported:
+#
+# [submit]
+# openai_api_key = "..."
+# service = "Dentist"
+#
+# [login]
+# username = "..."
+#
+# ClassyClick also supports environment overlays. Set default_env to one of the
+# tables under [env.<name>] or pass --env <name> on the command line.
+#
+# default_env = "personal"
+#
+# [env.personal.submit]
+# openai_api_key = "..."
+#
+# [env.work.submit]
+# openai_api_key = "..."

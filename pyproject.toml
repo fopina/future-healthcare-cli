@@ -43,6 +43,9 @@ Homepage = "https://github.com/fopina/future-healthcare-cli"
 [tool.setuptools.packages.find]
 include = ["futurehealth*"]
 
+[tool.setuptools.package-data]
+"futurehealth.commands" = ["config.example.toml"]
+
 [tool.setuptools.dynamic]
 version = {attr = "futurehealth.__version__"}
 
