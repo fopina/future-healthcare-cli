@@ -8,7 +8,7 @@ import classyclick
 import click
 import requests
 
-from .. import utils
+from .. import client, utils
 from .cli import CLI
 
 DEFAULT_ROOT_URL = 'https://clientes-vic.future-healthcare.net/'
@@ -120,6 +120,29 @@ def strip_html_tags(value):
 def format_error_detail(error_detail, i18n_labels):
     label = error_detail['errorMessage']
     return f'[{error_detail["resultCode"]}][{label}] {strip_html_tags(i18n_message_for(label, i18n_labels))}'
+
+
+def translated_api_error_message(error: client.exceptions.ClientAPIError):
+    path = utils.errors_path()
+    try:
+        error_details = json.loads(path.read_text())
+        i18n_labels = json.loads(i18n_path_for(path).read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    label = None
+    for error_detail in error_details:
+        if error_detail.get('resultCode') == error.result_code:
+            label = error_detail.get('errorMessage')
+            break
+
+    if label is None:
+        label = error.result_code_detail
+    if not label:
+        return None
+
+    message = strip_html_tags(i18n_message_for(label, i18n_labels))
+    return None if message == label else message
 
 
 def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):
