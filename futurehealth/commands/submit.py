@@ -13,6 +13,7 @@ from ..client.models import Building
 from ..utils.models import ReceiptData
 from . import _mixins
 from .cli import CLI
+from .fetch_error_details import ensure_error_details_files
 
 
 class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
@@ -39,6 +40,7 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
 
     def __call__(self):
         self.setup_logging()
+        ensure_error_details_files()
         try:
             data = self.get_receipt_data()
             self.review_data(data)

@@ -17,6 +17,8 @@
 #
 # token_path = "/path/to/token.txt"
 # log_dir = "/path/to/logs"
+# errors_path = "/path/to/errors.json"
+# locale = "pt-PT"
 #
 # [env.personal.submit]
 # person = "Alice"

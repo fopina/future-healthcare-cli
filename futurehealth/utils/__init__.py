@@ -1,7 +1,11 @@
+import locale as system_locale
 from pathlib import Path
 
 TOKEN_FILENAME = 'token.txt'
 LOG_DIRNAME = 'logs'
+ERRORS_FILENAME = 'errors.json'
+SUPPORTED_LOCALES = ('pt-PT', 'en-US')
+DEFAULT_LOCALE = 'en-US'
 
 
 def config_dir(config_path: Path | str | None = None) -> Path:
@@ -41,6 +45,37 @@ def logs_path(config_path: Path | str | None = None, override: Path | str | None
     if context_value := _context_path('log_dir'):
         return context_value
     return config_dir(config_path) / LOG_DIRNAME
+
+
+def errors_path(config_path: Path | str | None = None, override: Path | str | None = None) -> Path:
+    if override is not None:
+        return Path(override)
+    if context_value := _context_path('errors_path'):
+        return context_value
+    return config_dir(config_path) / ERRORS_FILENAME
+
+
+def normalize_locale(value: str | None) -> str | None:
+    if not value:
+        return None
+    normalized = value.replace('_', '-')
+    for supported_locale in SUPPORTED_LOCALES:
+        if normalized.lower() == supported_locale.lower():
+            return supported_locale
+    return None
+
+
+def locale(override: str | None = None) -> str:
+    if override is not None:
+        if normalized_locale := normalize_locale(override):
+            return normalized_locale
+        raise ValueError(f'Locale must be one of: {", ".join(SUPPORTED_LOCALES)}')
+
+    if context_value := _context_path('locale'):
+        return str(context_value)
+
+    detected_locale, _ = system_locale.getlocale()
+    return normalize_locale(detected_locale) or DEFAULT_LOCALE
 
 
 def validate_nif(nif: str) -> bool:

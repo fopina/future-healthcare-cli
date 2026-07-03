@@ -21,7 +21,7 @@ class Client(requests.Session):
         base_url='https://ws.future-healthcare.net/prd/api/fhc/fhcp/',
         token=None,
         partnership='vic',
-        language='pt-PT',
+        language='en-US',
         *args,
         **kwargs,
     ):

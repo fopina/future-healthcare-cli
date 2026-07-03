@@ -40,12 +40,14 @@ class TestSubmitCommand(unittest.TestCase):
     @patch('futurehealth.commands.submit.Submit.get_service')
     @patch('futurehealth.commands.submit.Submit.get_person')
     @patch('futurehealth.commands.submit.Submit.review_data')
+    @patch('futurehealth.commands.submit.ensure_error_details_files')
     @patch('futurehealth.commands._mixins.Client')
     @patch('futurehealth.client.ContractClient')
     def test_submit_full_flow(
         self,
         mock_contract_client,
         mock_client_class,
+        mock_ensure_error_details,
         mock_review,
         mock_get_person,
         mock_get_service,
@@ -90,6 +92,7 @@ class TestSubmitCommand(unittest.TestCase):
 
         # Verify calls
         mock_setup_logging.assert_called_once()
+        mock_ensure_error_details.assert_called_once_with()
         reviewed_data = mock_review.call_args[0][0]
         self.assertEqual(reviewed_data.business_nif, '123456789')
         self.assertEqual(reviewed_data.invoice_number, 'INV001')
@@ -117,8 +120,11 @@ class TestSubmitCommand(unittest.TestCase):
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.Submit.review_data')
+    @patch('futurehealth.commands.submit.ensure_error_details_files')
     @patch('futurehealth.commands._mixins.Client')
-    def test_submit_feature_not_available(self, mock_client_class, mock_review, mock_setup_logging):
+    def test_submit_feature_not_available(
+        self, mock_client_class, mock_ensure_error_details, mock_review, mock_setup_logging
+    ):
         """Test submit when REFUNDS_SUBMISSION feature is not available."""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
@@ -141,10 +147,15 @@ class TestSubmitCommand(unittest.TestCase):
         with self.assertRaises(AssertionError):
             submit()
 
+        mock_ensure_error_details.assert_called_once_with()
+
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.Submit.review_data')
+    @patch('futurehealth.commands.submit.ensure_error_details_files')
     @patch('futurehealth.commands._mixins.Client')
-    def test_submit_requires_receipt_fields(self, mock_client_class, mock_review, mock_setup_logging):
+    def test_submit_requires_receipt_fields(
+        self, mock_client_class, mock_ensure_error_details, mock_review, mock_setup_logging
+    ):
         """Test submit validates required CLI fields."""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
@@ -166,8 +177,10 @@ class TestSubmitCommand(unittest.TestCase):
             click.ClickException,
             r'Missing required receipt fields: --business-nif, --invoice-number, --total-amount, --date',
         ):
-            submit.validate_required_receipt_fields()
+            submit()
 
+        mock_setup_logging.assert_called_once_with()
+        mock_ensure_error_details.assert_called_once_with()
         mock_review.assert_not_called()
 
     def test_setup_logging_labels_copied_input_files(self):
