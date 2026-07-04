@@ -164,8 +164,8 @@ class TestFetchErrorDetails(unittest.TestCase):
     def test_translated_api_error_message_uses_cached_error_details_fixture(self):
         error = exceptions.ClientAPIError(
             {
-                'resultMessage': 'Validation failed',
-                'resultCodeDetail': -473,
+                'resultCodeDetail': [{'originId': '7723', 'resultCode': -473}],
+                'resultCode': -499,
             }
         )
 

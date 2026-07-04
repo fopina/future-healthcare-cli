@@ -136,6 +136,24 @@ def _error_message_key(label):
     return label.rsplit('.', 1)[-1]
 
 
+def _api_error_values(value):
+    if isinstance(value, list):
+        for item in value:
+            yield from _api_error_values(item)
+        return
+
+    if isinstance(value, dict):
+        if 'resultCode' in value:
+            yield value.get('resultCode')
+        if 'resultCodeDetail' in value:
+            yield from _api_error_values(value.get('resultCodeDetail'))
+        if 'errorMessage' in value:
+            yield value.get('errorMessage')
+        return
+
+    yield value
+
+
 def translated_api_error_message(error: client.exceptions.ClientAPIError):
     path = utils.errors_path()
     try:
@@ -152,9 +170,11 @@ def translated_api_error_message(error: client.exceptions.ClientAPIError):
 
     messages = []
     seen = set()
-    for value in (error.result_code, error.result_code_detail):
+    for value in (*_api_error_values(error.result_code_detail), *_api_error_values(error.result_code)):
         code = _numeric_result_code(value)
         if code is None:
+            if not isinstance(value, str):
+                continue
             label = value
         else:
             error_detail = error_details_by_code.get(code)
