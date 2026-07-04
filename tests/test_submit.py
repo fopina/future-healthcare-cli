@@ -364,9 +364,9 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(result.id, 'b1')
         self.assertEqual(result.name, 'Hospital A')
 
-    def test_get_building_multiple_matches_building_name(self):
+    def test_get_building_multiple_matches_building(self):
         """Test get_building with multiple matches and preselected building name."""
-        submit = Submit(receipt_file=Path('test.pdf'), building_name='Hospital B')
+        submit = Submit(receipt_file=Path('test.pdf'), building='Hospital B')
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [
@@ -383,9 +383,9 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(result.name, 'Hospital B')
         self.assertEqual(nif, '123456789')
 
-    def test_get_building_building_name_not_found(self):
+    def test_get_building_building_not_found(self):
         """Test get_building rejects an unknown preselected building name."""
-        submit = Submit(receipt_file=Path('test.pdf'), building_name='Hospital C')
+        submit = Submit(receipt_file=Path('test.pdf'), building='Hospital C')
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [
@@ -397,9 +397,9 @@ class TestSubmitCommand(unittest.TestCase):
         with self.assertRaisesRegex(click.ClickException, "No building found named 'Hospital C' for 123456789"):
             submit.get_building('123456789')
 
-    def test_get_building_building_name_ambiguous(self):
+    def test_get_building_building_ambiguous(self):
         """Test get_building rejects an ambiguous preselected building name."""
-        submit = Submit(receipt_file=Path('test.pdf'), building_name='Hospital A')
+        submit = Submit(receipt_file=Path('test.pdf'), building='Hospital A')
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [
