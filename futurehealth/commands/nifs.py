@@ -26,6 +26,7 @@ def select_building(
     building_name: str | None = None,
     *,
     prompt_for_nif: bool = True,
+    prompt_for_building: bool = True,
 ) -> tuple[Building, str]:
     building_name = normalize_building_name(building_name)
     while True:
@@ -43,10 +44,16 @@ def select_building(
             raise click.ClickException(f'{nif} has no buildings')
         nif = click.prompt(f'{nif} has no buildings, enter correct one')
 
-    return select_building_from_candidates(cands, nif, building_name), nif
+    return select_building_from_candidates(cands, nif, building_name, prompt=prompt_for_building), nif
 
 
-def select_building_from_candidates(cands: list[Building], nif: str, building_name: str | None = None) -> Building:
+def select_building_from_candidates(
+    cands: list[Building],
+    nif: str,
+    building_name: str | None = None,
+    *,
+    prompt: bool = True,
+) -> Building:
     building_name = normalize_building_name(building_name)
     if building_name is not None:
         matches = [cand for cand in cands if (cand.name or '').casefold() == building_name.casefold()]
@@ -62,6 +69,11 @@ def select_building_from_candidates(cands: list[Building], nif: str, building_na
     click.secho(f'Multiple buildings found for {nif}:', fg='red')
     for i, cand in enumerate(cands, start=1):
         click.echo(format_building(cand, i))
+
+    if not prompt:
+        raise click.ClickException(
+            f'Multiple buildings found for {nif}. Pass --building with one of the names above, or use --interactive.'
+        )
 
     while True:
         try:
