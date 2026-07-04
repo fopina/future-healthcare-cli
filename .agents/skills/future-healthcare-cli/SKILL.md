@@ -61,7 +61,8 @@ or Future Healthcare API endpoints directly from agent code.
    likely misread, ask the user to provide or correct it. Do not guess NIFs, dates, invoice numbers, totals, person
    names, service names, or supporting attachment paths.
 
-6. Run the CLI with explicit values:
+6. Run the CLI with explicit values. Do not pass `-i` or `--interactive`; submissions must stay non-interactive and
+   must provide enough flags for the CLI to either choose accurately or fail clearly.
 
    ```bash
    future-healthcare submit /path/to/receipt.pdf \
@@ -102,8 +103,9 @@ or Future Healthcare API endpoints directly from agent code.
    invoice or user context suggests another entity, subsidy, copayment, or prior coverage for a non-`Medicamentos`
    service, ask the user whether `--primary-entity` applies before submitting.
 
-10. If the command prompts for insured person, service, building, or review corrections, answer from user-provided
-   context. When context is missing, ask the user.
+10. If `submit` fails because insured person, service, building, or NIF selection is missing or ambiguous, do not rerun
+   with `-i` or `--interactive`. Resolve the missing value from listed CLI output or user-provided context, ask the
+   user when context is missing, then rerun `submit` with the matching explicit flag.
 
 11. If `submit` fails after one or more documents were uploaded, do not try to reuse or clean up the uploaded document
    GUIDs. After fixing the required parameters, run `future-healthcare submit` again normally and let the CLI upload the
