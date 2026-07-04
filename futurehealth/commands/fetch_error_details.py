@@ -122,6 +122,13 @@ def format_error_detail(error_detail, i18n_labels):
     return f'[{error_detail["resultCode"]}][{label}] {strip_html_tags(i18n_message_for(label, i18n_labels))}'
 
 
+def _numeric_result_code(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def translated_api_error_message(error: client.exceptions.ClientAPIError):
     path = utils.errors_path()
     try:
@@ -130,13 +137,22 @@ def translated_api_error_message(error: client.exceptions.ClientAPIError):
     except (OSError, json.JSONDecodeError):
         return None
 
+    result_codes = {
+        code
+        for code in (
+            _numeric_result_code(error.result_code),
+            _numeric_result_code(error.result_code_detail),
+        )
+        if code is not None
+    }
+
     label = None
     for error_detail in error_details:
-        if error_detail.get('resultCode') == error.result_code:
+        if _numeric_result_code(error_detail.get('resultCode')) in result_codes:
             label = error_detail.get('errorMessage')
             break
 
-    if label is None:
+    if label is None and _numeric_result_code(error.result_code_detail) is None:
         label = error.result_code_detail
     if not label:
         return None

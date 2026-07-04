@@ -21,6 +21,8 @@ from futurehealth.commands.fetch_error_details import (
     translated_api_error_message,
 )
 
+FIXTURES = Path(__file__).parent / 'fixtures'
+
 
 class TestFetchErrorDetails(unittest.TestCase):
     def test_find_main_script_url(self):
@@ -159,33 +161,19 @@ class TestFetchErrorDetails(unittest.TestCase):
             '[-108][error.api.missing_request_data] error.api.missing_request_data',
         )
 
-    def test_translated_api_error_message_uses_cached_error_details(self):
-        with TemporaryDirectory() as tmp:
-            errors_path = Path(tmp) / 'errors.json'
-            errors_path.write_text(
-                json.dumps(
-                    [
-                        {
-                            'resultCode': -108,
-                            'errorMessage': 'error.api.missing_request_data',
-                            'tag': 'MISSING_REQUEST_DATA',
-                        }
-                    ]
-                )
-            )
-            i18n_path_for(errors_path).write_text(
-                json.dumps({'error': {'api': {'missing_request_data': 'Missing <strong>request</strong> data'}}})
-            )
-            error = exceptions.ClientAPIError(
-                {
-                    'resultCode': -108,
-                    'resultMessage': 'Validation failed',
-                    'resultCodeDetail': 'server.detail',
-                }
-            )
+    def test_translated_api_error_message_uses_cached_error_details_fixture(self):
+        error = exceptions.ClientAPIError(
+            {
+                'resultMessage': 'Validation failed',
+                'resultCodeDetail': -473,
+            }
+        )
 
-            with patch('futurehealth.commands.fetch_error_details.utils.errors_path', return_value=errors_path):
-                self.assertEqual(translated_api_error_message(error), 'Missing request data')
+        with patch(
+            'futurehealth.commands.fetch_error_details.utils.errors_path',
+            return_value=FIXTURES / 'future-health-errors-473.json',
+        ):
+            self.assertEqual(translated_api_error_message(error), 'Receipt already submitted')
 
     def test_translated_api_error_message_returns_none_when_cache_misses(self):
         with TemporaryDirectory() as tmp:

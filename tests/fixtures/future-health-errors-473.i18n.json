@@ -1,0 +1,11 @@
+{
+  "error_details": {
+    "error": {
+      "api": {
+        "register_already_exists": " <p>The data indicated already has an associated record. You can request password recovery.</p>",
+        "repeated_refund_receipt": " <p>We're sorry, but there is already a refund receipt with the same number.</p>",
+        "submission_deadline_expired": " <p>We're sorry, but the reimbursement submission deadline has expired.</p> "
+      }
+    }
+  }
+}
