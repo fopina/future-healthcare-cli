@@ -132,6 +132,10 @@ def _numeric_result_code(value):
         return None
 
 
+def _error_message_key(label):
+    return label.rsplit('.', 1)[-1]
+
+
 def translated_api_error_message(error: client.exceptions.ClientAPIError):
     path = utils.errors_path()
     try:
@@ -140,28 +144,38 @@ def translated_api_error_message(error: client.exceptions.ClientAPIError):
     except (OSError, json.JSONDecodeError):
         return None
 
-    result_codes = {
-        code
-        for code in (
-            _numeric_result_code(error.result_code),
-            _numeric_result_code(error.result_code_detail),
-        )
-        if code is not None
+    error_details_by_code = {
+        code: error_detail
+        for error_detail in error_details
+        if (code := _numeric_result_code(error_detail.get('resultCode'))) is not None
     }
 
-    label = None
-    for error_detail in error_details:
-        if _numeric_result_code(error_detail.get('resultCode')) in result_codes:
-            label = error_detail.get('errorMessage')
-            break
+    messages = []
+    seen = set()
+    for value in (error.result_code, error.result_code_detail):
+        code = _numeric_result_code(value)
+        if code is None:
+            label = value
+        else:
+            error_detail = error_details_by_code.get(code)
+            label = error_detail.get('errorMessage') if error_detail else None
 
-    if label is None and _numeric_result_code(error.result_code_detail) is None:
-        label = error.result_code_detail
-    if not label:
-        return None
+        if not label:
+            continue
 
-    message = strip_html_tags(i18n_message_for(label, i18n_labels))
-    return None if message == label else message
+        message = strip_html_tags(i18n_message_for(label, i18n_labels))
+        if message == label:
+            continue
+
+        key = (code, label)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        suffix = f'{code}, {_error_message_key(label)}' if code is not None else _error_message_key(label)
+        messages.append(f'{message} ({suffix})')
+
+    return ' '.join(messages) or None
 
 
 def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):

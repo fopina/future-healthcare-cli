@@ -175,7 +175,7 @@ class TestFetchErrorDetails(unittest.TestCase):
         ):
             self.assertEqual(
                 translated_api_error_message(error),
-                "We're sorry, but the reimbursement submission deadline has expired.",
+                "We're sorry, but the reimbursement submission deadline has expired. (-473, submission_deadline_expired)",
             )
 
     def test_translated_api_error_message_returns_none_when_cache_misses(self):
