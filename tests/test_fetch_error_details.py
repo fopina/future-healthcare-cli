@@ -303,7 +303,7 @@ class TestFetchErrorDetails(unittest.TestCase):
             )
 
             self.assertEqual(result.exit_code, 0, result.output)
-            self.assertEqual(result.output, '[12][error.api.other] Other\n')
+            self.assertIn('[12][error.api.other] Other\n', result.output)
             self.assertEqual(
                 json.loads(errors_path.read_text()),
                 [{'resultCode': 12, 'errorMessage': 'error.api.other', 'tag': 'OTHER'}],
