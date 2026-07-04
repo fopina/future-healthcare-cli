@@ -12,6 +12,7 @@ from .. import client, utils
 from ..client.models import Building
 from ..utils.models import ReceiptData
 from . import _mixins
+from .buildings import select_building
 from .cli import CLI
 from .fetch_error_details import ensure_error_details_files, translated_api_error_message
 
@@ -32,6 +33,9 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     service: str = classyclick.Option(
         '-s',
         help='Name of the service to request refund. If not specified or multiple matches, it will be prompted interactively',
+    )
+    address_number: int = classyclick.Option(
+        help='1-based building/address number to select without prompting when multiple addresses are found'
     )
     debug: bool = classyclick.Option(help='Enable debug logging')
     primary_entity: bool = classyclick.Option(
@@ -227,29 +231,4 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                 raise click.ClickException('Person selection cancelled')
 
     def get_building(self, nif: str) -> tuple[Building, str]:
-        while True:
-            if not utils.validate_nif(nif):
-                nif = click.prompt(f'{nif} is not a valid NIF, enter correct one')
-                continue
-            cands = self.contract.load_buildings(nif)
-            if cands:
-                break
-            nif = click.prompt(f'{nif} has no buildings, enter correct one')
-
-        if len(cands) == 1:
-            return cands[0], nif
-
-        choices = [f'{i + 1}. {cand.name} address {cand.address}' for i, cand in enumerate(cands)]
-        click.secho(f'Multiple buildings found for {nif}:', fg='red')
-        for choice in choices:
-            click.echo(choice)
-
-        while True:
-            try:
-                selection = click.prompt('Select your building/address number', type=int, default=1)
-                if 1 <= selection <= len(cands):
-                    return cands[selection - 1], nif
-                else:
-                    click.echo(f'Please enter a number between 1 and {len(cands)}')
-            except click.Abort:
-                raise click.ClickException('Building selection cancelled')
+        return select_building(self.contract, nif, self.address_number)

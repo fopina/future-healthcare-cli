@@ -364,6 +364,39 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(result.id, 'b1')
         self.assertEqual(result.name, 'Hospital A')
 
+    def test_get_building_multiple_matches_address_number(self):
+        """Test get_building with multiple matches and preselected address number."""
+        submit = Submit(receipt_file=Path('test.pdf'), address_number=2)
+
+        mock_contract = MagicMock()
+        mock_contract.load_buildings.return_value = [
+            Building(id='b1', name='Hospital A', address='123 Main St'),
+            Building(id='b2', name='Hospital B', address='456 Oak St'),
+        ]
+        submit.contract = mock_contract
+
+        with patch('click.prompt') as mock_prompt:
+            result, nif = submit.get_building('123456789')
+
+        mock_prompt.assert_not_called()
+        self.assertEqual(result.id, 'b2')
+        self.assertEqual(result.name, 'Hospital B')
+        self.assertEqual(nif, '123456789')
+
+    def test_get_building_address_number_out_of_range(self):
+        """Test get_building rejects an invalid preselected address number."""
+        submit = Submit(receipt_file=Path('test.pdf'), address_number=3)
+
+        mock_contract = MagicMock()
+        mock_contract.load_buildings.return_value = [
+            Building(id='b1', name='Hospital A', address='123 Main St'),
+            Building(id='b2', name='Hospital B', address='456 Oak St'),
+        ]
+        submit.contract = mock_contract
+
+        with self.assertRaisesRegex(click.ClickException, '--address-number must be between 1 and 2'):
+            submit.get_building('123456789')
+
     def test_get_building_invalid_nif(self):
         """Test get_building with invalid NIF."""
         submit = Submit(receipt_file=Path('test.pdf'))

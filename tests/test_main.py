@@ -10,6 +10,7 @@ from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands import login
 from futurehealth.commands._mixins import ContractMixin, TokenMixin
 from futurehealth.commands.beneficiaries import Beneficiaries
+from futurehealth.commands.buildings import Nifs
 from futurehealth.commands.cli import CLI
 from futurehealth.commands.config import Config
 from futurehealth.commands.services import Services
@@ -319,3 +320,7 @@ class TestMain(unittest.TestCase):
     def test_cli_registers_beneficiaries_command(self):
         """Test the app exposes the beneficiaries command."""
         self.assertIs(CLI.click.commands['beneficiaries'], Beneficiaries.click)
+
+    def test_cli_registers_nifs_command(self):
+        """Test the app exposes the NIF lookup command."""
+        self.assertIs(CLI.click.commands['nifs'], Nifs.click)

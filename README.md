@@ -14,6 +14,7 @@ The CLI helps with common refund flows:
 
 - `login` stores your API token locally
 - `check` lists refund status/history
+- `nifs` looks up known refund addresses for a business NIF
 - `submit` submits a new expense with receipt metadata
 
 ## Install
@@ -48,6 +49,12 @@ Check existing refunds:
 future-healthcare check
 ```
 
+Look up the available addresses for a business NIF:
+
+```bash
+future-healthcare nifs 509876543
+```
+
 Submit a receipt by passing the required fields explicitly:
 
 ```bash
@@ -59,6 +66,8 @@ future-healthcare submit ~/Downloads/example-receipt.pdf \
 ```
 
 The `submit` command may prompt you to choose the insured person, service, or building when multiple matches are available.
+Use `--address-number` to select a building/address up front for non-interactive runs; the number matches the output
+from `future-healthcare nifs`.
 Receipt data extraction happens before calling the CLI. Agent users can use the bundled Codex skill in
 `.agents/skills/future-healthcare-cli/SKILL.md` to inspect the receipt, extract the required fields, and then run
 `future-healthcare submit` with explicit flags.
