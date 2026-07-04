@@ -173,7 +173,10 @@ class TestFetchErrorDetails(unittest.TestCase):
             'futurehealth.commands.fetch_error_details.utils.errors_path',
             return_value=FIXTURES / 'future-health-errors-473.json',
         ):
-            self.assertEqual(translated_api_error_message(error), 'Receipt already submitted')
+            self.assertEqual(
+                translated_api_error_message(error),
+                "We're sorry, but the reimbursement submission deadline has expired.",
+            )
 
     def test_translated_api_error_message_returns_none_when_cache_misses(self):
         with TemporaryDirectory() as tmp:

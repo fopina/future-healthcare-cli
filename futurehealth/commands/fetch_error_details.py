@@ -104,17 +104,20 @@ def i18n_message_for(label, i18n_labels):
     if label in i18n_labels:
         return i18n_labels[label]
 
-    value = i18n_labels
-    for part in label.split('.'):
-        if not isinstance(value, dict) or part not in value:
-            return label
-        value = value[part]
+    for labels in (i18n_labels, i18n_labels.get('error_details') if isinstance(i18n_labels, dict) else None):
+        value = labels
+        for part in label.split('.'):
+            if not isinstance(value, dict) or part not in value:
+                break
+            value = value[part]
+        else:
+            return value if isinstance(value, str) else label
 
-    return value if isinstance(value, str) else label
+    return label
 
 
 def strip_html_tags(value):
-    return unescape(re.sub(r'<[^>]*>', '', value))
+    return unescape(re.sub(r'<[^>]*>', '', value)).strip()
 
 
 def format_error_detail(error_detail, i18n_labels):
