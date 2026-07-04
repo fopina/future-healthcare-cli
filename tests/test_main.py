@@ -10,9 +10,9 @@ from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands import login
 from futurehealth.commands._mixins import ContractMixin, TokenMixin
 from futurehealth.commands.beneficiaries import Beneficiaries
-from futurehealth.commands.buildings import Nifs
 from futurehealth.commands.cli import CLI
 from futurehealth.commands.config import Config
+from futurehealth.commands.nifs import Nifs
 from futurehealth.commands.services import Services
 from futurehealth.utils.models import ReceiptData
 

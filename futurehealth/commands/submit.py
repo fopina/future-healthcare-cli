@@ -12,9 +12,9 @@ from .. import client, utils
 from ..client.models import Building
 from ..utils.models import ReceiptData
 from . import _mixins
-from .buildings import select_building
 from .cli import CLI
 from .fetch_error_details import ensure_error_details_files, translated_api_error_message
+from .nifs import select_building
 
 
 class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):

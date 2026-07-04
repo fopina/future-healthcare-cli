@@ -71,9 +71,6 @@ class Nifs(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     """Look up refund submission buildings/addresses for a business NIF."""
 
     nif: str = classyclick.Argument()
-    address_number: int = classyclick.Option(
-        help='1-based building/address number to select without prompting when multiple addresses are found'
-    )
 
     def __call__(self):
         try:
@@ -87,11 +84,6 @@ class Nifs(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
 
         if not buildings:
             raise click.ClickException(f'{self.nif} has no buildings')
-
-        if normalize_address_number(self.address_number) is not None:
-            building = select_building_from_candidates(buildings, self.nif, self.address_number)
-            click.echo(format_building(building))
-            return
 
         for i, building in enumerate(buildings, start=1):
             click.echo(format_building(building, i))

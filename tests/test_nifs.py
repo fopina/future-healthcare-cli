@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import click
 
 from futurehealth.client.models import Building
-from futurehealth.commands.buildings import Nifs
+from futurehealth.commands.nifs import Nifs
 
 
 class TestNifsCommand(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestNifsCommand(unittest.TestCase):
         cmd = Nifs(nif='123456789')
         cmd.contract = contract
 
-        with patch('futurehealth.commands.buildings.click.echo') as echo:
+        with patch('futurehealth.commands.nifs.click.echo') as echo:
             cmd()
 
         contract.validate_feature.assert_called_once_with('REFUNDS_SUBMISSION')
@@ -32,22 +32,6 @@ class TestNifsCommand(unittest.TestCase):
             ],
         )
 
-    def test_address_number_selects_one_building(self):
-        contract = MagicMock()
-        contract.validate_feature.return_value = True
-        contract.load_buildings.return_value = [
-            Building(id='b1', name='Hospital A', address='123 Main St'),
-            Building(id='b2', name='Hospital B', address='456 Oak St'),
-        ]
-
-        cmd = Nifs(nif='123456789', address_number=2)
-        cmd.contract = contract
-
-        with patch('futurehealth.commands.buildings.click.echo') as echo:
-            cmd()
-
-        echo.assert_called_once_with('Hospital B address 456 Oak St')
-
     def test_rejects_invalid_nif_without_api_lookup(self):
         contract = MagicMock()
         contract.validate_feature.return_value = True
@@ -59,14 +43,3 @@ class TestNifsCommand(unittest.TestCase):
             cmd()
 
         contract.load_buildings.assert_not_called()
-
-    def test_address_number_out_of_range(self):
-        contract = MagicMock()
-        contract.validate_feature.return_value = True
-        contract.load_buildings.return_value = [Building(id='b1', name='Hospital A', address='123 Main St')]
-
-        cmd = Nifs(nif='123456789', address_number=2)
-        cmd.contract = contract
-
-        with self.assertRaisesRegex(click.ClickException, '--address-number must be between 1 and 1'):
-            cmd()
