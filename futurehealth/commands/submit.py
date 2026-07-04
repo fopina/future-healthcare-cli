@@ -28,16 +28,18 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     date: str = classyclick.Option(help='Treatment/payment date from the receipt')
 
     person: str = classyclick.Option(
-        '-p', help='Name of the insured person. If not specified or multiple matches, it will be prompted interactively'
+        '-p',
+        help='Name of the insured person. Must resolve to exactly one person unless --interactive is used',
     )
     service: str = classyclick.Option(
         '-s',
-        help='Name of the service to request refund. If not specified or multiple matches, it will be prompted interactively',
+        help='Name of the service to request refund. Must resolve to exactly one service unless --interactive is used',
     )
     building: str = classyclick.Option(
-        help='Building name to select without prompting when multiple addresses are found; use only the name before the address shown by `nifs`'
+        help='Building name to select when multiple addresses are found; use only the name before the address shown by `nifs`'
     )
     debug: bool = classyclick.Option(help='Enable debug logging')
+    interactive: bool = classyclick.Option('-i', help='Prompt to resolve ambiguous or missing selections')
     primary_entity: bool = classyclick.Option(
         help='Whether this expense was already partially covered by another entity'
     )
@@ -194,6 +196,11 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         for choice in choices:
             click.echo(choice)
 
+        if not self.interactive:
+            raise click.ClickException(
+                'Multiple services found. Pass --service with a more specific value, or use --interactive.'
+            )
+
         while True:
             try:
                 selection = click.prompt('Select service number', type=int, default=1)
@@ -220,6 +227,11 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         for choice in choices:
             click.echo(choice)
 
+        if not self.interactive:
+            raise click.ClickException(
+                'Multiple persons found. Pass --person with a more specific value, or use --interactive.'
+            )
+
         while True:
             try:
                 selection = click.prompt('Select person number', type=int, default=1)
@@ -231,4 +243,10 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                 raise click.ClickException('Person selection cancelled')
 
     def get_building(self, nif: str) -> tuple[Building, str]:
-        return select_building(self.contract, nif, self.building)
+        return select_building(
+            self.contract,
+            nif,
+            self.building,
+            prompt_for_nif=self.interactive,
+            prompt_for_building=self.interactive,
+        )

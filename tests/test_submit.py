@@ -34,6 +34,7 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(submit.person, 'John')
         self.assertEqual(submit.service, 'Medical')
         self.assertTrue(submit.debug)
+        self.assertFalse(submit.interactive)
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.Submit.get_building')
@@ -268,7 +269,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_service_multiple_matches_interactive(self):
         """Test get_service with multiple matches - interactive selection."""
-        submit = Submit(receipt_file=Path('test.pdf'), service=None)
+        submit = Submit(receipt_file=Path('test.pdf'), service=None, interactive=True)
 
         # Mock refunds_request_setup
         mock_setup = MagicMock()
@@ -283,6 +284,23 @@ class TestSubmitCommand(unittest.TestCase):
 
         self.assertEqual(result.id, 1)
         self.assertEqual(result.name, 'Medical Service A')
+
+    def test_get_service_multiple_matches_non_interactive(self):
+        """Test get_service with multiple matches fails without prompting by default."""
+        submit = Submit(receipt_file=Path('test.pdf'), service=None)
+
+        mock_setup = MagicMock()
+        mock_setup.services = [
+            Service(Id=1, Name='Medical Service A', IsMandatoryInvoiceFile=True, IsMandatoryAditionalFile=False),
+            Service(Id=2, Name='Medical Service B', IsMandatoryInvoiceFile=True, IsMandatoryAditionalFile=False),
+        ]
+        submit.refunds_request_setup = mock_setup
+
+        with patch('click.prompt') as mock_prompt:
+            with self.assertRaisesRegex(click.ClickException, 'Multiple services found'):
+                submit.get_service()
+
+        mock_prompt.assert_not_called()
 
     def test_get_service_no_matches(self):
         """Test get_service with no matches."""
@@ -315,7 +333,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_person_multiple_matches_interactive(self):
         """Test get_person with multiple matches - interactive selection."""
-        submit = Submit(receipt_file=Path('test.pdf'), person=None)
+        submit = Submit(receipt_file=Path('test.pdf'), person=None, interactive=True)
 
         # Mock refunds_request_setup
         mock_setup = MagicMock()
@@ -330,6 +348,23 @@ class TestSubmitCommand(unittest.TestCase):
 
         self.assertEqual(result.card_number, '987654321')
         self.assertEqual(result.name, 'Jane Smith')
+
+    def test_get_person_multiple_matches_non_interactive(self):
+        """Test get_person with multiple matches fails without prompting by default."""
+        submit = Submit(receipt_file=Path('test.pdf'), person=None)
+
+        mock_setup = MagicMock()
+        mock_setup.insured_persons = [
+            Person(CardNumber='123456789', Name='John Doe', Email='john@example.com'),
+            Person(CardNumber='987654321', Name='Jane Smith', Email='jane@example.com'),
+        ]
+        submit.refunds_request_setup = mock_setup
+
+        with patch('click.prompt') as mock_prompt:
+            with self.assertRaisesRegex(click.ClickException, 'Multiple persons found'):
+                submit.get_person()
+
+        mock_prompt.assert_not_called()
 
     def test_get_building_single_match(self):
         """Test get_building with single match."""
@@ -348,7 +383,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_multiple_matches_interactive(self):
         """Test get_building with multiple matches - interactive selection."""
-        submit = Submit(receipt_file=Path('test.pdf'))
+        submit = Submit(receipt_file=Path('test.pdf'), interactive=True)
 
         # Mock contract
         mock_contract = MagicMock()
@@ -363,6 +398,23 @@ class TestSubmitCommand(unittest.TestCase):
 
         self.assertEqual(result.id, 'b1')
         self.assertEqual(result.name, 'Hospital A')
+
+    def test_get_building_multiple_matches_non_interactive(self):
+        """Test get_building with multiple matches fails without prompting by default."""
+        submit = Submit(receipt_file=Path('test.pdf'))
+
+        mock_contract = MagicMock()
+        mock_contract.load_buildings.return_value = [
+            Building(id='b1', name='Hospital A', address='123 Main St'),
+            Building(id='b2', name='Hospital B', address='456 Oak St'),
+        ]
+        submit.contract = mock_contract
+
+        with patch('click.prompt') as mock_prompt:
+            with self.assertRaisesRegex(click.ClickException, 'Multiple buildings found for 123456789'):
+                submit.get_building('123456789')
+
+        mock_prompt.assert_not_called()
 
     def test_get_building_multiple_matches_building(self):
         """Test get_building with multiple matches and preselected building name."""
@@ -413,7 +465,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_invalid_nif(self):
         """Test get_building with invalid NIF."""
-        submit = Submit(receipt_file=Path('test.pdf'))
+        submit = Submit(receipt_file=Path('test.pdf'), interactive=True)
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [Building(id='x', name='x', address='x')]
         submit.contract = mock_contract
@@ -425,9 +477,22 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(result.id, 'x')
         self.assertEqual(nif, '123456789')
 
+    def test_get_building_invalid_nif_non_interactive(self):
+        """Test get_building rejects an invalid NIF without prompting by default."""
+        submit = Submit(receipt_file=Path('test.pdf'))
+        mock_contract = MagicMock()
+        submit.contract = mock_contract
+
+        with patch('click.prompt') as mock_prompt:
+            with self.assertRaisesRegex(click.ClickException, 'invalid is not a valid NIF'):
+                submit.get_building('invalid')
+
+        mock_prompt.assert_not_called()
+        mock_contract.load_buildings.assert_not_called()
+
     def test_get_building_no_buildings(self):
         """Test get_building when no buildings found for NIF."""
-        submit = Submit(receipt_file=Path('test.pdf'))
+        submit = Submit(receipt_file=Path('test.pdf'), interactive=True)
 
         # Mock contract
         mock_contract = MagicMock()
@@ -441,3 +506,17 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(mock_prompt.call_count, 1)
         self.assertEqual(result.id, 'x')
         self.assertEqual(nif, '505956985')
+
+    def test_get_building_no_buildings_non_interactive(self):
+        """Test get_building rejects a NIF with no buildings without prompting by default."""
+        submit = Submit(receipt_file=Path('test.pdf'))
+
+        mock_contract = MagicMock()
+        mock_contract.load_buildings.return_value = []
+        submit.contract = mock_contract
+
+        with patch('click.prompt') as mock_prompt:
+            with self.assertRaisesRegex(click.ClickException, '123456789 has no buildings'):
+                submit.get_building('123456789')
+
+        mock_prompt.assert_not_called()
