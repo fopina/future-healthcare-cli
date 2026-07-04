@@ -34,8 +34,8 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         '-s',
         help='Name of the service to request refund. If not specified or multiple matches, it will be prompted interactively',
     )
-    address_number: int = classyclick.Option(
-        help='1-based building/address number to select without prompting when multiple addresses are found'
+    building_name: str = classyclick.Option(
+        help='Building/address name to select without prompting when multiple addresses are found'
     )
     debug: bool = classyclick.Option(help='Enable debug logging')
     primary_entity: bool = classyclick.Option(
@@ -231,4 +231,4 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                 raise click.ClickException('Person selection cancelled')
 
     def get_building(self, nif: str) -> tuple[Building, str]:
-        return select_building(self.contract, nif, self.address_number)
+        return select_building(self.contract, nif, self.building_name)

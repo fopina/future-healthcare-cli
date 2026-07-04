@@ -9,22 +9,25 @@ from .cli import CLI
 
 def format_building(building: Building, index: int | None = None) -> str:
     prefix = f'{index}. ' if index is not None else ''
-    address = f' address {building.address}' if building.address else ''
+    address = f' ({building.address})' if building.address else ''
     return f'{prefix}{building.name}{address}'
 
 
-def normalize_address_number(address_number: int | None) -> int | None:
-    return address_number if isinstance(address_number, int) else None
+def normalize_building_name(building_name: str | None) -> str | None:
+    if not isinstance(building_name, str):
+        return None
+    building_name = building_name.strip()
+    return building_name or None
 
 
 def select_building(
     contract,
     nif: str,
-    address_number: int | None = None,
+    building_name: str | None = None,
     *,
     prompt_for_nif: bool = True,
 ) -> tuple[Building, str]:
-    address_number = normalize_address_number(address_number)
+    building_name = normalize_building_name(building_name)
     while True:
         if not utils.validate_nif(nif):
             if not prompt_for_nif:
@@ -40,15 +43,18 @@ def select_building(
             raise click.ClickException(f'{nif} has no buildings')
         nif = click.prompt(f'{nif} has no buildings, enter correct one')
 
-    return select_building_from_candidates(cands, nif, address_number), nif
+    return select_building_from_candidates(cands, nif, building_name), nif
 
 
-def select_building_from_candidates(cands: list[Building], nif: str, address_number: int | None = None) -> Building:
-    address_number = normalize_address_number(address_number)
-    if address_number is not None:
-        if 1 <= address_number <= len(cands):
-            return cands[address_number - 1]
-        raise click.ClickException(f'--address-number must be between 1 and {len(cands)}')
+def select_building_from_candidates(cands: list[Building], nif: str, building_name: str | None = None) -> Building:
+    building_name = normalize_building_name(building_name)
+    if building_name is not None:
+        matches = [cand for cand in cands if (cand.name or '').casefold() == building_name.casefold()]
+        if len(matches) == 1:
+            return matches[0]
+        if not matches:
+            raise click.ClickException(f"No building found named '{building_name}' for {nif}")
+        raise click.ClickException(f"Multiple buildings named '{building_name}' found for {nif}")
 
     if len(cands) == 1:
         return cands[0]
@@ -85,5 +91,5 @@ class Nifs(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         if not buildings:
             raise click.ClickException(f'{self.nif} has no buildings')
 
-        for i, building in enumerate(buildings, start=1):
-            click.echo(format_building(building, i))
+        for building in buildings:
+            click.echo(format_building(building))

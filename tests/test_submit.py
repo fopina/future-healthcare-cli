@@ -364,9 +364,9 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(result.id, 'b1')
         self.assertEqual(result.name, 'Hospital A')
 
-    def test_get_building_multiple_matches_address_number(self):
-        """Test get_building with multiple matches and preselected address number."""
-        submit = Submit(receipt_file=Path('test.pdf'), address_number=2)
+    def test_get_building_multiple_matches_building_name(self):
+        """Test get_building with multiple matches and preselected building name."""
+        submit = Submit(receipt_file=Path('test.pdf'), building_name='Hospital B')
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [
@@ -383,9 +383,9 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(result.name, 'Hospital B')
         self.assertEqual(nif, '123456789')
 
-    def test_get_building_address_number_out_of_range(self):
-        """Test get_building rejects an invalid preselected address number."""
-        submit = Submit(receipt_file=Path('test.pdf'), address_number=3)
+    def test_get_building_building_name_not_found(self):
+        """Test get_building rejects an unknown preselected building name."""
+        submit = Submit(receipt_file=Path('test.pdf'), building_name='Hospital C')
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [
@@ -394,7 +394,21 @@ class TestSubmitCommand(unittest.TestCase):
         ]
         submit.contract = mock_contract
 
-        with self.assertRaisesRegex(click.ClickException, '--address-number must be between 1 and 2'):
+        with self.assertRaisesRegex(click.ClickException, "No building found named 'Hospital C' for 123456789"):
+            submit.get_building('123456789')
+
+    def test_get_building_building_name_ambiguous(self):
+        """Test get_building rejects an ambiguous preselected building name."""
+        submit = Submit(receipt_file=Path('test.pdf'), building_name='Hospital A')
+
+        mock_contract = MagicMock()
+        mock_contract.load_buildings.return_value = [
+            Building(id='b1', name='Hospital A', address='123 Main St'),
+            Building(id='b2', name='Hospital A', address='456 Oak St'),
+        ]
+        submit.contract = mock_contract
+
+        with self.assertRaisesRegex(click.ClickException, "Multiple buildings named 'Hospital A' found for 123456789"):
             submit.get_building('123456789')
 
     def test_get_building_invalid_nif(self):

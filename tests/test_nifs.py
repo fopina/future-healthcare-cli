@@ -27,8 +27,8 @@ class TestNifsCommand(unittest.TestCase):
         self.assertEqual(
             [call.args[0] for call in echo.call_args_list],
             [
-                '1. Hospital A address 123 Main St',
-                '2. Hospital B address 456 Oak St',
+                'Hospital A (123 Main St)',
+                'Hospital B (456 Oak St)',
             ],
         )
 

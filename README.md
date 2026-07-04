@@ -55,6 +55,8 @@ Look up the available addresses for a business NIF:
 future-healthcare nifs 509876543
 ```
 
+This prints one building per line as `Building Name (address)`.
+
 Submit a receipt by passing the required fields explicitly:
 
 ```bash
@@ -66,7 +68,7 @@ future-healthcare submit ~/Downloads/example-receipt.pdf \
 ```
 
 The `submit` command may prompt you to choose the insured person, service, or building when multiple matches are available.
-Use `--address-number` to select a building/address up front for non-interactive runs; the number matches the output
+Use `--building-name` to select a building/address up front for non-interactive runs; the name matches the output
 from `future-healthcare nifs`.
 Receipt data extraction happens before calling the CLI. Agent users can use the bundled Codex skill in
 `.agents/skills/future-healthcare-cli/SKILL.md` to inspect the receipt, extract the required fields, and then run
