@@ -1,20 +1,24 @@
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from futurehealth.commands.cli import CLI
-from futurehealth.utils import logs_path, token_path, validate_nif
+from futurehealth.utils import errors_path, logs_path, token_path, validate_nif
+from futurehealth.utils import locale as fh_locale
 
 
 class TestPaths(unittest.TestCase):
     def test_default_paths_are_next_to_config(self):
         self.assertEqual(token_path(), CLI.CONFIG_DEFAULT_PATH.parent / 'token.txt')
         self.assertEqual(logs_path(), CLI.CONFIG_DEFAULT_PATH.parent / 'logs')
+        self.assertEqual(errors_path(), CLI.CONFIG_DEFAULT_PATH.parent / 'errors.json')
 
     def test_paths_are_next_to_custom_config(self):
         config = Path('/tmp/future-healthcare/config.toml')
 
         self.assertEqual(token_path(config), Path('/tmp/future-healthcare/token.txt'))
         self.assertEqual(logs_path(config), Path('/tmp/future-healthcare/logs'))
+        self.assertEqual(errors_path(config), Path('/tmp/future-healthcare/errors.json'))
 
     def test_explicit_paths_override_config_defaults(self):
         config = Path('/tmp/future-healthcare/config.toml')
@@ -27,6 +31,28 @@ class TestPaths(unittest.TestCase):
             logs_path(config, override='/tmp/other/logs'),
             Path('/tmp/other/logs'),
         )
+        self.assertEqual(
+            errors_path(config, override='/tmp/other/errors.json'),
+            Path('/tmp/other/errors.json'),
+        )
+
+
+class TestLocale(unittest.TestCase):
+    def test_locale_uses_supported_system_locale(self):
+        with patch('futurehealth.utils.system_locale.getlocale', return_value=('pt_PT', 'UTF-8')):
+            self.assertEqual(fh_locale(), 'pt-PT')
+
+    def test_locale_falls_back_to_english_for_unsupported_system_locale(self):
+        with patch('futurehealth.utils.system_locale.getlocale', return_value=('fr_FR', 'UTF-8')):
+            self.assertEqual(fh_locale(), 'en-US')
+
+    def test_locale_accepts_supported_override(self):
+        self.assertEqual(fh_locale(override='en-US'), 'en-US')
+        self.assertEqual(fh_locale(override='pt_PT'), 'pt-PT')
+
+    def test_locale_rejects_unsupported_override(self):
+        with self.assertRaises(ValueError):
+            fh_locale(override='fr-FR')
 
 
 class TestValidateNIF(unittest.TestCase):

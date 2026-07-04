@@ -42,9 +42,13 @@ class TestCheck(unittest.TestCase):
         cmd = Check(limit=2)
         cmd.contract = contract
 
-        with patch('futurehealth.commands.check.click.echo') as echo:
+        with (
+            patch('futurehealth.commands.check.click.echo') as echo,
+            patch('futurehealth.commands.check.ensure_error_details_files') as ensure_error_details,
+        ):
             cmd()
 
+        ensure_error_details.assert_called_once_with()
         self.assertEqual(echo.call_count, 2)
         contract.unified_refunds.assert_called_once_with(page_size=20, page=1)
 
@@ -63,10 +67,12 @@ class TestCheck(unittest.TestCase):
         with (
             patch('futurehealth.commands.check.dt.date') as date,
             patch('futurehealth.commands.check.click.echo') as echo,
+            patch('futurehealth.commands.check.ensure_error_details_files') as ensure_error_details,
         ):
             date.today.return_value = REAL_DATE(2026, 7, 2)
             cmd()
 
+        ensure_error_details.assert_called_once_with()
         self.assertEqual(echo.call_count, 2)
         contract.unified_refunds.assert_called_once_with(page_size=20, page=1)
 

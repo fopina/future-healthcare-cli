@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
 
+from futurehealth import utils
 from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands import login
 from futurehealth.commands._mixins import ContractMixin, TokenMixin
@@ -131,6 +132,16 @@ class TestMixins(unittest.TestCase):
             with self.assertRaises(Exception):  # Should raise ClickException
                 _ = mixin.token
 
+    @patch('futurehealth.commands._mixins.locale', return_value='pt-PT')
+    @patch('futurehealth.commands._mixins.Client')
+    def test_token_mixin_client_uses_group_locale(self, mock_client_class, mock_locale):
+        mixin = TokenMixin()
+        mixin.__dict__['token'] = 'test_token'
+
+        self.assertIs(mixin.client, mock_client_class.return_value)
+        mock_client_class.assert_called_once_with(token='test_token', language='pt-PT')
+        mock_locale.assert_called_once_with()
+
     @patch('futurehealth.commands._mixins.ContractClient')
     def test_contract_mixin(self, mock_contract_client):
         """Test ContractMixin contract property."""
@@ -159,9 +170,10 @@ class TestMixins(unittest.TestCase):
 
 
 class TestCommands(unittest.TestCase):
+    @patch('futurehealth.commands.login.locale', return_value='pt-PT')
     @patch('futurehealth.commands.login.token_path')
     @patch('futurehealth.client.Client')
-    def test_login_success(self, mock_client_class, mock_token_path):
+    def test_login_success(self, mock_client_class, mock_token_path, mock_locale):
         """Test successful login."""
         mock_client_class.return_value.login.return_value = {'body': {'token': 'auth_token'}}
 
@@ -171,6 +183,8 @@ class TestCommands(unittest.TestCase):
         cmd = login.Login(username='user', password='pass')
         cmd()
 
+        mock_client_class.assert_called_once_with(language='pt-PT')
+        mock_locale.assert_called_once_with()
         mock_client_class.return_value.login.assert_called_once_with('user', 'pass')
         mock_path.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True, mode=0o700)
         mock_path.write_text.assert_called_once_with('auth_token')
@@ -180,7 +194,7 @@ class TestCommands(unittest.TestCase):
         """Test login with authentication error."""
         from futurehealth import client
 
-        mock_client_class.login.side_effect = client.exceptions.LoginError('Invalid credentials')
+        mock_client_class.return_value.login.side_effect = client.exceptions.LoginError('Invalid credentials')
 
         cmd = login.Login(username='user', password='wrong')
 
@@ -204,6 +218,8 @@ class TestCommands(unittest.TestCase):
                     str(config_path),
                     '--token-path',
                     str(token_file),
+                    '--locale',
+                    'en-US',
                     'login',
                     '-u',
                     'user',
@@ -214,6 +230,46 @@ class TestCommands(unittest.TestCase):
 
             self.assertEqual(result.exit_code, 0, result.output)
             self.assertEqual(token_file.read_text(), 'auth_token')
+            mock_client_class.assert_called_once_with(language='en-US')
+
+    @patch('futurehealth.client.Client')
+    def test_group_locale_option_controls_login_client_language(self, mock_client_class):
+        mock_client_class.return_value.login.return_value = {'body': {'token': 'auth_token'}}
+
+        with TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            token_file = tmp_path / 'token.txt'
+
+            result = CliRunner().invoke(
+                CLI.click,
+                [
+                    '--token-path',
+                    str(token_file),
+                    '--locale',
+                    'pt-PT',
+                    'login',
+                    '-u',
+                    'user',
+                    '-p',
+                    'pass',
+                ],
+            )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            mock_client_class.assert_called_once_with(language='pt-PT')
+
+    def test_group_locale_option_rejects_unsupported_locale(self):
+        result = CliRunner().invoke(CLI.click, ['--locale', 'fr-FR', 'config'])
+
+        self.assertNotEqual(result.exit_code, 0, result.output)
+        self.assertIn('Locale must be one of: pt-PT, en-US', result.output)
+
+    def test_group_locale_help_shows_detected_default(self):
+        result = CliRunner().invoke(CLI.click, ['--help'])
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn(f'[default: {utils.locale()}]', result.output)
+        self.assertNotIn('system locale, falling back to en-US', result.output)
 
     @patch('futurehealth.client.Client')
     def test_login_token_path_defaults_next_to_config(self, mock_client_class):

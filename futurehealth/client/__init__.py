@@ -21,7 +21,7 @@ class Client(requests.Session):
         base_url='https://ws.future-healthcare.net/prd/api/fhc/fhcp/',
         token=None,
         partnership='vic',
-        language='pt-PT',
+        language='en-US',
         *args,
         **kwargs,
     ):
@@ -69,11 +69,15 @@ class Client(requests.Session):
         if r.status_code != 200:
             try:
                 rd = r.json()
-                exc = exceptions.ClientError(
-                    f'Contracts - {rd["resultMessage"]} - {rd["resultCodeDetail"]} ({r.status_code})'
-                )
             except Exception:
                 exc = exceptions.ClientError('Unexpected error')
+            else:
+                exc = exceptions.ClientAPIError(
+                    rd,
+                    status_code=r.status_code,
+                    response=r,
+                    message=f'Contracts - {rd.get("resultMessage")} - {rd.get("resultCodeDetail")} ({r.status_code})',
+                )
             raise exc
 
         r = r.json()

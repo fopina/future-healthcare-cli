@@ -13,6 +13,7 @@ from ..client.models import Building
 from ..utils.models import ReceiptData
 from . import _mixins
 from .cli import CLI
+from .fetch_error_details import ensure_error_details_files, translated_api_error_message
 
 
 class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
@@ -39,10 +40,10 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
 
     def __call__(self):
         self.setup_logging()
+        ensure_error_details_files()
         try:
             data = self.get_receipt_data()
-            self.review_data(data)
-            self.console_logger.info(f'Parsed data after review: {data}')
+            self.console_logger.info(f'Receipt data: {data}')
 
             assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
             building, new_nif = self.get_building(data.business_nif)
@@ -75,6 +76,9 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                 building.id,
                 person.email,
             )
+        except client.exceptions.ClientAPIError as e:
+            self.file_logger.exception('Failed to submit with exception')
+            raise click.ClickException(translated_api_error_message(e) or str(e))
         except client.exceptions.ClientError as e:
             self.file_logger.exception('Failed to submit with exception')
             raise click.ClickException(str(e))
@@ -109,7 +113,7 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
         if missing:
             joined = ', '.join(missing)
             raise click.ClickException(
-                f'Missing required receipt fields: {joined}. Extract them before calling this command and pass them '
+                f'Missing required receipt fields: {joined}. Gather them before calling this command and pass them '
                 'explicitly.'
             )
 
@@ -249,26 +253,3 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                     click.echo(f'Please enter a number between 1 and {len(cands)}')
             except click.Abort:
                 raise click.ClickException('Building selection cancelled')
-
-    def review_data(self, data: ReceiptData):
-        click.secho('Review the extract data and choose any to fix:', fg='red')
-        fields = list(data.__class__.model_fields)
-        click.echo('0. All good!')
-        for i, field in enumerate(fields):
-            click.echo(f'{i + 1}. {field} = {getattr(data, field)}')
-        while True:
-            try:
-                selection = click.prompt('Select the field you want to change', type=int, default=0)
-                if selection == 0:
-                    return
-                if selection > len(fields):
-                    click.echo(f'Please enter a number between 0 and {len(fields)}')
-                else:
-                    field = fields[selection - 1]
-                    cur_val = getattr(data, field) or ''
-                    new_val = click.prompt(f'New value for {field}', type=str, default=str(cur_val))
-                    setattr(data, field, new_val)
-                    new_val = getattr(data, field)
-                    click.echo(f'{field} updated to {new_val}')
-            except click.Abort:
-                raise click.ClickException('Review cancelled')

@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, patch
 
 import click
 
+from futurehealth.client import exceptions
 from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands.submit import Submit
-from futurehealth.utils.models import ReceiptData
 
 
 class TestSubmitCommand(unittest.TestCase):
@@ -39,14 +39,14 @@ class TestSubmitCommand(unittest.TestCase):
     @patch('futurehealth.commands.submit.Submit.get_building')
     @patch('futurehealth.commands.submit.Submit.get_service')
     @patch('futurehealth.commands.submit.Submit.get_person')
-    @patch('futurehealth.commands.submit.Submit.review_data')
+    @patch('futurehealth.commands.submit.ensure_error_details_files')
     @patch('futurehealth.commands._mixins.Client')
     @patch('futurehealth.client.ContractClient')
     def test_submit_full_flow(
         self,
         mock_contract_client,
         mock_client_class,
-        mock_review,
+        mock_ensure_error_details,
         mock_get_person,
         mock_get_service,
         mock_get_building,
@@ -90,11 +90,7 @@ class TestSubmitCommand(unittest.TestCase):
 
         # Verify calls
         mock_setup_logging.assert_called_once()
-        reviewed_data = mock_review.call_args[0][0]
-        self.assertEqual(reviewed_data.business_nif, '123456789')
-        self.assertEqual(reviewed_data.invoice_number, 'INV001')
-        self.assertEqual(reviewed_data.total_amount, 100.50)
-        self.assertEqual(reviewed_data.date, '2023-01-01')
+        mock_ensure_error_details.assert_called_once_with()
         mock_client_class.assert_called_once()
         mock_contract.validate_feature.assert_called_once_with('REFUNDS_SUBMISSION')
         mock_get_building.assert_called_once_with('123456789')
@@ -116,9 +112,9 @@ class TestSubmitCommand(unittest.TestCase):
         )
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
-    @patch('futurehealth.commands.submit.Submit.review_data')
+    @patch('futurehealth.commands.submit.ensure_error_details_files')
     @patch('futurehealth.commands._mixins.Client')
-    def test_submit_feature_not_available(self, mock_client_class, mock_review, mock_setup_logging):
+    def test_submit_feature_not_available(self, mock_client_class, mock_ensure_error_details, mock_setup_logging):
         """Test submit when REFUNDS_SUBMISSION feature is not available."""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
@@ -141,10 +137,12 @@ class TestSubmitCommand(unittest.TestCase):
         with self.assertRaises(AssertionError):
             submit()
 
+        mock_ensure_error_details.assert_called_once_with()
+
     @patch('futurehealth.commands.submit.Submit.setup_logging')
-    @patch('futurehealth.commands.submit.Submit.review_data')
+    @patch('futurehealth.commands.submit.ensure_error_details_files')
     @patch('futurehealth.commands._mixins.Client')
-    def test_submit_requires_receipt_fields(self, mock_client_class, mock_review, mock_setup_logging):
+    def test_submit_requires_receipt_fields(self, mock_client_class, mock_ensure_error_details, mock_setup_logging):
         """Test submit validates required CLI fields."""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
@@ -166,9 +164,45 @@ class TestSubmitCommand(unittest.TestCase):
             click.ClickException,
             r'Missing required receipt fields: --business-nif, --invoice-number, --total-amount, --date',
         ):
-            submit.validate_required_receipt_fields()
+            submit()
 
-        mock_review.assert_not_called()
+        mock_setup_logging.assert_called_once_with()
+        mock_ensure_error_details.assert_called_once_with()
+
+    @patch('futurehealth.commands.submit.Submit.setup_logging')
+    @patch('futurehealth.commands.submit.translated_api_error_message')
+    @patch('futurehealth.commands.submit.ensure_error_details_files')
+    def test_submit_translates_api_errors(self, mock_ensure_error_details, mock_translate, mock_setup_logging):
+        """Test submit translates structured API errors when presenting them."""
+        error = exceptions.ClientAPIError(
+            {
+                'resultCode': -108,
+                'resultMessage': 'Validation failed',
+                'resultCodeDetail': 'error.api.missing_request_data',
+            }
+        )
+        mock_translate.return_value = 'Missing request data'
+
+        mock_contract = MagicMock()
+        mock_contract.validate_feature.side_effect = error
+
+        submit = Submit(
+            receipt_file=Path('test.pdf'),
+            business_nif='1',
+            invoice_number='1',
+            total_amount=1,
+            date='2023-01-01',
+        )
+        submit.contract = mock_contract
+        submit.file_logger = MagicMock()
+        submit.console_logger = MagicMock()
+
+        with self.assertRaisesRegex(click.ClickException, 'Missing request data'):
+            submit()
+
+        mock_setup_logging.assert_called_once_with()
+        mock_ensure_error_details.assert_called_once_with()
+        mock_translate.assert_called_once_with(error)
 
     def test_setup_logging_labels_copied_input_files(self):
         """Test setup_logging labels invoice and attachment copies clearly."""
@@ -360,37 +394,3 @@ class TestSubmitCommand(unittest.TestCase):
         self.assertEqual(mock_prompt.call_count, 1)
         self.assertEqual(result.id, 'x')
         self.assertEqual(nif, '505956985')
-
-    @patch('futurehealth.utils.models.ReceiptData.model_copy')
-    def test_review_data_update_field(self, mock_model_copy):
-        """Test review_data field update functionality."""
-        submit = Submit(receipt_file=Path('test.pdf'))
-
-        data = ReceiptData(
-            business_nif='123456789',
-            invoice_number='INV001',
-            total_amount=100.50,
-            date='2023-01-01',
-        )
-
-        with patch('click.prompt') as mock_prompt:
-            # First call returns 2 (invoice_number field), second call returns 0 (done)
-            mock_prompt.side_effect = [2, 'INV002', 0]
-
-            submit.review_data(data)
-
-        self.assertEqual(data.invoice_number, 'INV002')
-
-    def test_review_data_all_good(self):
-        """Test review_data when user selects 'All good'."""
-        submit = Submit(receipt_file=Path('test.pdf'))
-
-        data = ReceiptData(
-            business_nif='123456789',
-            invoice_number='INV001',
-            total_amount=100.50,
-            date='2023-01-01',
-        )
-
-        with patch('click.prompt', return_value=0):  # All good
-            submit.review_data(data)
