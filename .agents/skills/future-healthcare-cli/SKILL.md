@@ -35,6 +35,7 @@ or Future Healthcare API endpoints directly from agent code.
    - `date`: treatment or payment date. Prefer `YYYY-MM-DD` when possible.
    - `person`: the assumed insured person name for `--person`, chosen from `future-healthcare beneficiaries`.
    - `service`: the assumed service name for `--service`, chosen from `future-healthcare services`.
+   - `building`: the provider building name for `--building` when the provider NIF has multiple known buildings.
 
 4. Always list the available beneficiaries and submission services before running `submit`:
 
@@ -52,16 +53,38 @@ or Future Healthcare API endpoints directly from agent code.
    Pick the `--service` value from that list. If the receipt does not confidently map to one listed service, ask the
    user which service to use.
 
-5. Before calling `future-healthcare submit`, show the extracted values and assumed routing choices to the user and ask
+5. When the provider NIF may map to multiple buildings, use the `nifs` command to list valid buildings for that NIF:
+
+   ```bash
+   future-healthcare nifs 509876543
+   ```
+
+   The command prints building names, optionally followed by addresses in parentheses. Use the exact building name
+   before the address as the `--building` value, for example:
+
+   ```bash
+   future-healthcare submit /path/to/receipt.pdf \
+     --business-nif 509876543 \
+     --invoice-number 'INV 2026/0001' \
+     --total-amount 40 \
+     --date '2026-03-14' \
+     --building 'Hospital Example'
+   ```
+
+   If the receipt, prior context, or the `nifs` output identifies exactly one building, include `--building` in
+   `submit`. If multiple buildings remain plausible, ask the user which listed building name to use. If `nifs` reports
+   that the NIF is invalid or has no buildings, ask the user to correct the NIF before submitting.
+
+6. Before calling `future-healthcare submit`, show the extracted values and assumed routing choices to the user and ask
    them to confirm they are correct. Include `business_nif`, `invoice_number`, `total_amount`, `date`, assumed
-   `person`, assumed `service`, whether `--primary-entity` will be used, and the invoice
+   `person`, assumed `service`, assumed `building` when used, whether `--primary-entity` will be used, and the invoice
    file path that will be used as `RECEIPT_FILE`. Also ask whether there are any extra supporting files to attach after
    the invoice. If the detected service from the invoice is `Medicamentos`, explicitly ask for the prescription file;
    this extra prescription attachment is mandatory for `Medicamentos` submissions. If any field is missing, unclear, or
    likely misread, ask the user to provide or correct it. Do not guess NIFs, dates, invoice numbers, totals, person
    names, service names, or supporting attachment paths.
 
-6. Run the CLI with explicit values. Do not pass `-i` or `--interactive`; submissions must stay non-interactive and
+7. Run the CLI with explicit values. Do not pass `-i` or `--interactive`; submissions must stay non-interactive and
    must provide enough flags for the CLI to either choose accurately or fail clearly.
 
    ```bash
@@ -72,7 +95,7 @@ or Future Healthcare API endpoints directly from agent code.
      --date '2026-03-14'
    ```
 
-7. Pass optional routing hints when known:
+8. Pass optional routing hints when known:
 
    ```bash
    future-healthcare submit /path/to/receipt.pdf \
@@ -81,10 +104,11 @@ or Future Healthcare API endpoints directly from agent code.
      --total-amount 40 \
      --date '2026-03-14' \
      --person 'Alice' \
-     --service 'Dentist'
+     --service 'Dentist' \
+     --building 'Hospital Example'
    ```
 
-8. Pass extra supporting attachments as positional arguments immediately after the invoice/receipt path and before any
+9. Pass extra supporting attachments as positional arguments immediately after the invoice/receipt path and before any
    options. For example:
 
    ```bash
@@ -95,23 +119,25 @@ or Future Healthcare API endpoints directly from agent code.
      --date '2026-03-14' \
      --person 'Alice' \
      --service 'Medicamentos' \
+     --building 'Pharmacy Example' \
      --primary-entity
    ```
 
-9. If the selected service is `Medicamentos`, include `--primary-entity`; the company requires medicines to have
+10. If the selected service is `Medicamentos`, include `--primary-entity`; the company requires medicines to have
    already been paid by the state as well. For other services, do not include `--primary-entity` by default. If the
    invoice or user context suggests another entity, subsidy, copayment, or prior coverage for a non-`Medicamentos`
    service, ask the user whether `--primary-entity` applies before submitting.
 
-10. If `submit` fails because insured person, service, building, or NIF selection is missing or ambiguous, do not rerun
-   with `-i` or `--interactive`. Resolve the missing value from listed CLI output or user-provided context, ask the
-   user when context is missing, then rerun `submit` with the matching explicit flag.
+11. If `submit` fails because insured person, service, building, or NIF selection is missing or ambiguous, do not rerun
+   with `-i` or `--interactive`. Resolve the missing value from listed CLI output, `future-healthcare nifs
+   BUSINESS_NIF`, or user-provided context, ask the user when context is missing, then rerun `submit` with the matching
+   explicit flag.
 
-11. If `submit` fails after one or more documents were uploaded, do not try to reuse or clean up the uploaded document
+12. If `submit` fails after one or more documents were uploaded, do not try to reuse or clean up the uploaded document
    GUIDs. After fixing the required parameters, run `future-healthcare submit` again normally and let the CLI upload the
    documents again with new GUIDs.
 
-12. If `future-healthcare check` or `future-healthcare submit` fails because the session is missing or invalid, ask the
+13. If `future-healthcare check` or `future-healthcare submit` fails because the session is missing or invalid, ask the
    user for approval to refresh the session, then run `login` without parameters:
 
    ```bash
