@@ -20,7 +20,6 @@ from .nifs import select_building
 class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     """Submit an expense, providing the receipt and, optionally, other attachments such as prescription"""
 
-    tls_verify: bool = classyclick.ContextMeta('tls_verify')
     receipt_file: Path = classyclick.Argument()
     other_attachments: list[Path] = classyclick.Argument(nargs=-1, type=Path)
     business_nif: str = classyclick.Option(help='Business NIF from the receipt')

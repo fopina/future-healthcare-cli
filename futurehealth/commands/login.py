@@ -3,11 +3,11 @@ import click
 
 from .. import client
 from ..utils import token_path
+from . import _mixins
 from .cli import CLI
 
 
-class Login(CLI.Command):
-    tls_verify: bool = classyclick.ContextMeta('tls_verify')
+class Login(CLI.Command, _mixins.TlsVerifyMixin):
     username: str = classyclick.Option('-u', help='Username')
     password: str = classyclick.Option('-p', help='Password')
 

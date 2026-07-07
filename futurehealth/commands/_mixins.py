@@ -1,5 +1,7 @@
+from dataclasses import dataclass
 from functools import cached_property
 
+import classyclick
 import click
 
 from ..client import Client, ContractClient
@@ -14,7 +16,12 @@ class ContractMixin:
         return ContractClient(self.client, contract['Token'])
 
 
-class TokenMixin:
+@dataclass(init=False)
+class TlsVerifyMixin:
+    tls_verify: bool = classyclick.ContextMeta('tls_verify')
+
+
+class TokenMixin(TlsVerifyMixin):
     @cached_property
     def token(self):
         path = token_path()

@@ -1,4 +1,3 @@
-import classyclick
 import click
 
 from .. import client
@@ -8,8 +7,6 @@ from .cli import CLI
 
 class Beneficiaries(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     """List available insured beneficiaries."""
-
-    tls_verify: bool = classyclick.ContextMeta('tls_verify')
 
     def __call__(self):
         try:

@@ -9,6 +9,7 @@ import click
 import requests
 
 from .. import client, utils
+from . import _mixins
 from .cli import CLI
 
 DEFAULT_ROOT_URL = 'https://clientes-vic.future-healthcare.net/'
@@ -233,10 +234,9 @@ def ensure_error_details_files(tls_verify=True):
         fetch_error_details(tls_verify=tls_verify)
 
 
-class FetchErrorDetails(CLI.Command):
+class FetchErrorDetails(CLI.Command, _mixins.TlsVerifyMixin):
     """Fetch error codes from the Future Healthcare web UI bundle."""
 
-    tls_verify: bool = classyclick.ContextMeta('tls_verify')
     root_url: str = classyclick.Option(default=DEFAULT_ROOT_URL, help='Future Healthcare web UI root URL')
 
     def __call__(self):

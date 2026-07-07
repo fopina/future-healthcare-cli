@@ -88,7 +88,6 @@ def select_building_from_candidates(
 class Nifs(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     """Look up refund submission buildings/addresses for a business NIF."""
 
-    tls_verify: bool = classyclick.ContextMeta('tls_verify')
     nif: str = classyclick.Argument()
 
     def __call__(self):
