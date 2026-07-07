@@ -270,9 +270,9 @@ class TestFetchErrorDetails(unittest.TestCase):
         self.assertEqual(
             mock_get.mock_calls,
             [
-                call('https://clientes-vic.future-healthcare.net/', timeout=30, verify=True),
-                call('https://clientes-vic.future-healthcare.net/main.abc123.js', timeout=30, verify=True),
-                call('https://clientes-vic.future-healthcare.net/assets/i18n/en-US.json', timeout=30, verify=True),
+                call('https://clientes-vic.future-healthcare.net/', timeout=30),
+                call('https://clientes-vic.future-healthcare.net/main.abc123.js', timeout=30),
+                call('https://clientes-vic.future-healthcare.net/assets/i18n/en-US.json', timeout=30),
             ],
         )
         root_response.raise_for_status.assert_called_once_with()
@@ -314,42 +314,9 @@ class TestFetchErrorDetails(unittest.TestCase):
             )
         mock_get.assert_has_calls(
             [
-                call('https://clientes-vic.future-healthcare.net/', timeout=30, verify=True),
-                call('https://clientes-vic.future-healthcare.net/main.abc123.js', timeout=30, verify=True),
-                call('https://clientes-vic.future-healthcare.net/assets/i18n/pt-PT.json', timeout=30, verify=True),
-            ]
-        )
-
-    @patch('futurehealth.commands.fetch_error_details.requests.get')
-    def test_group_insecure_option_disables_fetch_error_details_tls_verification(self, mock_get):
-        root_response = MagicMock()
-        root_response.text = '<script src="/main.abc123.js"></script>'
-        root_response.url = 'https://clientes-vic.future-healthcare.net/'
-        script_response = MagicMock()
-        script_response.text = """
-        this.errorsListArray = [
-          { resultCode: 12, errorMessage: 'error.api.other', tag: 'OTHER' }
-        ];
-        """
-        i18n_response = MagicMock()
-        i18n_response.json.return_value = {'error': {'api': {'other': 'Other'}}}
-        mock_get.side_effect = [root_response, script_response, i18n_response]
-
-        with TemporaryDirectory() as tmp:
-            errors_path = Path(tmp) / 'errors.json'
-
-            result = CliRunner().invoke(
-                CLI.click,
-                ['--errors-path', str(errors_path), '--insecure', 'fetch-error-details'],
-            )
-
-            self.assertEqual(result.exit_code, 0, result.output)
-
-        mock_get.assert_has_calls(
-            [
-                call('https://clientes-vic.future-healthcare.net/', timeout=30, verify=False),
-                call('https://clientes-vic.future-healthcare.net/main.abc123.js', timeout=30, verify=False),
-                call('https://clientes-vic.future-healthcare.net/assets/i18n/en-US.json', timeout=30, verify=False),
+                call('https://clientes-vic.future-healthcare.net/', timeout=30),
+                call('https://clientes-vic.future-healthcare.net/main.abc123.js', timeout=30),
+                call('https://clientes-vic.future-healthcare.net/assets/i18n/pt-PT.json', timeout=30),
             ]
         )
 

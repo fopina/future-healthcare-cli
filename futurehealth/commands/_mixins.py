@@ -26,4 +26,7 @@ class TokenMixin:
 
     @cached_property
     def client(self):
-        return Client(token=self.token, language=locale(), verify=tls_verify())
+        client_kwargs = {}
+        if not tls_verify():
+            client_kwargs['verify'] = False
+        return Client(token=self.token, language=locale(), **client_kwargs)

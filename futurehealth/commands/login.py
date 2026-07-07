@@ -11,7 +11,10 @@ class Login(CLI.Command):
     password: str = classyclick.Option('-p', help='Password')
 
     def __call__(self):
-        c = client.Client(language=locale(), verify=tls_verify())
+        client_kwargs = {}
+        if not tls_verify():
+            client_kwargs['verify'] = False
+        c = client.Client(language=locale(), **client_kwargs)
         try:
             r = c.login(self.username, self.password)
         except client.exceptions.LoginError as e:

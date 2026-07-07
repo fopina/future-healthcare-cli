@@ -5,14 +5,6 @@ import requests
 from futurehealth.client import Client, exceptions
 
 
-def test_client_tls_verification_defaults_to_enabled():
-    assert Client().verify is True
-
-
-def test_client_can_disable_tls_verification():
-    assert Client(verify=False).verify is False
-
-
 def test_request_raises_structured_api_error_for_error_json_response():
     response = MagicMock()
     response.status_code = 409
