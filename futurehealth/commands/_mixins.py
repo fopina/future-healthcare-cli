@@ -34,7 +34,13 @@ class TlsVerifyMixin:
     tls_verify: bool = _DefaultContextMeta('tls_verify')
 
 
-class TokenMixin(TlsVerifyMixin):
+class ClientMixin(TlsVerifyMixin):
+    @cached_property
+    def client(self):
+        return Client(verify=self.tls_verify)
+
+
+class TokenMixin(ClientMixin):
     @cached_property
     def token(self):
         path = token_path()

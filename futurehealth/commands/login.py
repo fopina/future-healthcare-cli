@@ -1,21 +1,20 @@
 import classyclick
 import click
 
-from .. import client
+from ..client import exceptions
 from ..utils import token_path
 from . import _mixins
 from .cli import CLI
 
 
-class Login(CLI.Command, _mixins.TlsVerifyMixin):
+class Login(CLI.Command, _mixins.ClientMixin):
     username: str = classyclick.Option('-u', help='Username')
     password: str = classyclick.Option('-p', help='Password')
 
     def __call__(self):
-        c = client.Client(verify=self.tls_verify)
         try:
-            r = c.login(self.username, self.password)
-        except client.exceptions.LoginError as e:
+            r = self.client.login(self.username, self.password)
+        except exceptions.LoginError as e:
             raise click.ClickException(e)
 
         path = token_path()
