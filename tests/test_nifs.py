@@ -16,7 +16,7 @@ class TestNifsCommand(unittest.TestCase):
             Building(id='b2', name='Hospital B', address='456 Oak St'),
         ]
 
-        cmd = Nifs(tls_verify=True, nif='123456789')
+        cmd = Nifs(nif='123456789')
         cmd.contract = contract
 
         with patch('futurehealth.commands.nifs.click.echo') as echo:
@@ -36,7 +36,7 @@ class TestNifsCommand(unittest.TestCase):
         contract = MagicMock()
         contract.validate_feature.return_value = True
 
-        cmd = Nifs(tls_verify=True, nif='invalid')
+        cmd = Nifs(nif='invalid')
         cmd.contract = contract
 
         with self.assertRaisesRegex(click.ClickException, 'invalid is not a valid NIF'):

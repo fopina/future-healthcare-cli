@@ -10,16 +10,12 @@ from futurehealth.client.models import Building, Person, Service
 from futurehealth.commands.submit import Submit
 
 
-def make_submit(**kwargs):
-    return Submit(tls_verify=True, **kwargs)
-
-
 class TestSubmitCommand(unittest.TestCase):
     """Test cases for the Submit command."""
 
     def test_submit_initialization(self):
         """Test Submit command initialization with options."""
-        submit = make_submit(
+        submit = Submit(
             receipt_file=Path('test.pdf'),
             business_nif='123456789',
             invoice_number='INV-1',
@@ -78,7 +74,7 @@ class TestSubmitCommand(unittest.TestCase):
         mock_get_person.return_value = mock_person
 
         # Create submit command
-        submit = make_submit(
+        submit = Submit(
             receipt_file=Path('test.pdf'),
             business_nif='123456789',
             invoice_number='INV001',
@@ -95,7 +91,7 @@ class TestSubmitCommand(unittest.TestCase):
 
         # Verify calls
         mock_setup_logging.assert_called_once()
-        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
+        mock_ensure_error_details.assert_called_once_with()
         mock_client_class.assert_called_once()
         mock_contract.validate_feature.assert_called_once_with('REFUNDS_SUBMISSION')
         mock_get_building.assert_called_once_with('123456789')
@@ -127,7 +123,7 @@ class TestSubmitCommand(unittest.TestCase):
         mock_contract = MagicMock()
         mock_contract.validate_feature.return_value = False
 
-        submit = make_submit(
+        submit = Submit(
             receipt_file=Path('test.pdf'),
             business_nif='1',
             invoice_number='1',
@@ -142,7 +138,7 @@ class TestSubmitCommand(unittest.TestCase):
         with self.assertRaises(AssertionError):
             submit()
 
-        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
+        mock_ensure_error_details.assert_called_once_with()
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.ensure_error_details_files')
@@ -155,7 +151,7 @@ class TestSubmitCommand(unittest.TestCase):
         mock_contract = MagicMock()
         mock_contract.validate_feature.return_value = True
 
-        submit = make_submit(receipt_file=Path('test.pdf'))
+        submit = Submit(receipt_file=Path('test.pdf'))
         submit.contract = mock_contract
         submit.file_logger = MagicMock()
         submit.console_logger = MagicMock()
@@ -172,7 +168,7 @@ class TestSubmitCommand(unittest.TestCase):
             submit()
 
         mock_setup_logging.assert_called_once_with()
-        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
+        mock_ensure_error_details.assert_called_once_with()
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.translated_api_error_message')
@@ -191,7 +187,7 @@ class TestSubmitCommand(unittest.TestCase):
         mock_contract = MagicMock()
         mock_contract.validate_feature.side_effect = error
 
-        submit = make_submit(
+        submit = Submit(
             receipt_file=Path('test.pdf'),
             business_nif='1',
             invoice_number='1',
@@ -206,7 +202,7 @@ class TestSubmitCommand(unittest.TestCase):
             submit()
 
         mock_setup_logging.assert_called_once_with()
-        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
+        mock_ensure_error_details.assert_called_once_with()
         mock_translate.assert_called_once_with(error)
 
     def test_setup_logging_labels_copied_input_files(self):
@@ -219,7 +215,7 @@ class TestSubmitCommand(unittest.TestCase):
             invoice.write_text('invoice')
             prescription.write_text('prescription')
 
-            submit = make_submit(receipt_file=invoice, other_attachments=[prescription], debug=True)
+            submit = Submit(receipt_file=invoice, other_attachments=[prescription], debug=True)
 
             try:
                 with patch('futurehealth.commands.submit.utils.logs_path', return_value=logs_dir):
@@ -238,7 +234,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_receipt_data_uses_flags_by_default(self):
         """Test receipt data comes from CLI flags."""
-        submit = make_submit(
+        submit = Submit(
             receipt_file=Path('test.pdf'),
             business_nif='123456789',
             invoice_number='INV001',
@@ -257,7 +253,7 @@ class TestSubmitCommand(unittest.TestCase):
     def test_get_service_single_match(self):
         """Test get_service with single match."""
         # FIXME: service=None should not be needed @ classyclick
-        submit = make_submit(receipt_file=Path('test.pdf'), service=None)
+        submit = Submit(receipt_file=Path('test.pdf'), service=None)
 
         # Mock refunds_request_setup
         mock_setup = MagicMock()
@@ -273,7 +269,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_service_multiple_matches_interactive(self):
         """Test get_service with multiple matches - interactive selection."""
-        submit = make_submit(receipt_file=Path('test.pdf'), service=None, interactive=True)
+        submit = Submit(receipt_file=Path('test.pdf'), service=None, interactive=True)
 
         # Mock refunds_request_setup
         mock_setup = MagicMock()
@@ -291,7 +287,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_service_multiple_matches_non_interactive(self):
         """Test get_service with multiple matches fails without prompting by default."""
-        submit = make_submit(receipt_file=Path('test.pdf'), service=None)
+        submit = Submit(receipt_file=Path('test.pdf'), service=None)
 
         mock_setup = MagicMock()
         mock_setup.services = [
@@ -308,7 +304,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_service_no_matches(self):
         """Test get_service with no matches."""
-        submit = make_submit(receipt_file=Path('test.pdf'))
+        submit = Submit(receipt_file=Path('test.pdf'))
         submit.service = 'NonExistent'
 
         # Mock refunds_request_setup
@@ -323,7 +319,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_person_single_match(self):
         """Test get_person with single match."""
-        submit = make_submit(receipt_file=Path('test.pdf'), person=None)
+        submit = Submit(receipt_file=Path('test.pdf'), person=None)
 
         # Mock refunds_request_setup
         mock_setup = MagicMock()
@@ -337,7 +333,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_person_multiple_matches_interactive(self):
         """Test get_person with multiple matches - interactive selection."""
-        submit = make_submit(receipt_file=Path('test.pdf'), person=None, interactive=True)
+        submit = Submit(receipt_file=Path('test.pdf'), person=None, interactive=True)
 
         # Mock refunds_request_setup
         mock_setup = MagicMock()
@@ -355,7 +351,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_person_multiple_matches_non_interactive(self):
         """Test get_person with multiple matches fails without prompting by default."""
-        submit = make_submit(receipt_file=Path('test.pdf'), person=None)
+        submit = Submit(receipt_file=Path('test.pdf'), person=None)
 
         mock_setup = MagicMock()
         mock_setup.insured_persons = [
@@ -372,7 +368,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_single_match(self):
         """Test get_building with single match."""
-        submit = make_submit(receipt_file=Path('test.pdf'))
+        submit = Submit(receipt_file=Path('test.pdf'))
 
         # Mock contract
         mock_contract = MagicMock()
@@ -387,7 +383,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_multiple_matches_interactive(self):
         """Test get_building with multiple matches - interactive selection."""
-        submit = make_submit(receipt_file=Path('test.pdf'), interactive=True)
+        submit = Submit(receipt_file=Path('test.pdf'), interactive=True)
 
         # Mock contract
         mock_contract = MagicMock()
@@ -405,7 +401,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_multiple_matches_non_interactive(self):
         """Test get_building with multiple matches fails without prompting by default."""
-        submit = make_submit(receipt_file=Path('test.pdf'))
+        submit = Submit(receipt_file=Path('test.pdf'))
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [
@@ -422,7 +418,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_multiple_matches_building(self):
         """Test get_building with multiple matches and preselected building name."""
-        submit = make_submit(receipt_file=Path('test.pdf'), building='Hospital B')
+        submit = Submit(receipt_file=Path('test.pdf'), building='Hospital B')
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [
@@ -441,7 +437,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_building_not_found(self):
         """Test get_building rejects an unknown preselected building name."""
-        submit = make_submit(receipt_file=Path('test.pdf'), building='Hospital C')
+        submit = Submit(receipt_file=Path('test.pdf'), building='Hospital C')
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [
@@ -455,7 +451,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_building_ambiguous(self):
         """Test get_building rejects an ambiguous preselected building name."""
-        submit = make_submit(receipt_file=Path('test.pdf'), building='Hospital A')
+        submit = Submit(receipt_file=Path('test.pdf'), building='Hospital A')
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [
@@ -469,7 +465,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_invalid_nif(self):
         """Test get_building with invalid NIF."""
-        submit = make_submit(receipt_file=Path('test.pdf'), interactive=True)
+        submit = Submit(receipt_file=Path('test.pdf'), interactive=True)
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = [Building(id='x', name='x', address='x')]
         submit.contract = mock_contract
@@ -483,7 +479,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_invalid_nif_non_interactive(self):
         """Test get_building rejects an invalid NIF without prompting by default."""
-        submit = make_submit(receipt_file=Path('test.pdf'))
+        submit = Submit(receipt_file=Path('test.pdf'))
         mock_contract = MagicMock()
         submit.contract = mock_contract
 
@@ -496,7 +492,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_no_buildings(self):
         """Test get_building when no buildings found for NIF."""
-        submit = make_submit(receipt_file=Path('test.pdf'), interactive=True)
+        submit = Submit(receipt_file=Path('test.pdf'), interactive=True)
 
         # Mock contract
         mock_contract = MagicMock()
@@ -513,7 +509,7 @@ class TestSubmitCommand(unittest.TestCase):
 
     def test_get_building_no_buildings_non_interactive(self):
         """Test get_building rejects a NIF with no buildings without prompting by default."""
-        submit = make_submit(receipt_file=Path('test.pdf'))
+        submit = Submit(receipt_file=Path('test.pdf'))
 
         mock_contract = MagicMock()
         mock_contract.load_buildings.return_value = []

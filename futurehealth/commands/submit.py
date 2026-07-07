@@ -46,7 +46,10 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
 
     def __call__(self):
         self.setup_logging()
-        ensure_error_details_files(tls_verify=self.tls_verify)
+        fetch_kwargs = {}
+        if self.tls_verify is False:
+            fetch_kwargs['tls_verify'] = False
+        ensure_error_details_files(**fetch_kwargs)
         try:
             data = self.get_receipt_data()
             self.console_logger.info(f'Receipt data: {data}')

@@ -18,7 +18,18 @@ class ContractMixin:
 
 @dataclass(init=False)
 class TlsVerifyMixin:
-    tls_verify: bool = classyclick.ContextMeta('tls_verify')
+    class _DefaultContextMeta(classyclick.Context):
+        default = True
+
+        def __init__(self, key: str, **attrs):
+            super().__init__(**attrs)
+            self._ctx_meta_key = key
+
+        def __call__(self, command):
+            self.store_field_name(command)
+            return self.click.decorators.pass_meta_key(self._ctx_meta_key, **self.attrs)(command)
+
+    tls_verify: bool = _DefaultContextMeta('tls_verify')
 
 
 class TokenMixin(TlsVerifyMixin):
