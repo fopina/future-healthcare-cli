@@ -12,7 +12,8 @@ class ContractMixin:
     @cached_property
     def contract(self):
         contract = self.client.contracts()[0]
-        assert contract['ContractState'] == 'ACTIVE', 'Contract NOT active'
+        if contract['ContractState'] != 'ACTIVE':
+            raise click.ClickException('Contract is not active')
         return ContractClient(self.client, contract['Token'])
 
 
