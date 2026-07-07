@@ -18,6 +18,8 @@ class ContractMixin:
 
 @dataclass(init=False)
 class TlsVerifyMixin:
+    # Replace with classyclick.ContextMeta(..., default=True) if/when supported:
+    # https://github.com/fopina/classyclick/issues/81
     class _DefaultContextMeta(classyclick.Context):
         default = True
 
