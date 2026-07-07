@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
+import click
 from click.testing import CliRunner
 
 from futurehealth import utils
@@ -164,7 +165,7 @@ class TestMixins(unittest.TestCase):
         mixin = ContractMixin()
         mixin.client = mock_client
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaisesRegex(click.ClickException, 'Contract is not active'):
             _ = mixin.contract
 
 

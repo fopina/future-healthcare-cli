@@ -135,7 +135,7 @@ class TestSubmitCommand(unittest.TestCase):
         submit.console_logger = MagicMock()
         submit.token = 'test_token'  # Mock token to avoid file access
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaisesRegex(click.ClickException, 'Refund submission not available'):
             submit()
 
         mock_ensure_error_details.assert_called_once_with(tls_verify=True)

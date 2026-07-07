@@ -51,7 +51,8 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
             data = self.get_receipt_data()
             self.console_logger.info(f'Receipt data: {data}')
 
-            assert self.contract.validate_feature('REFUNDS_SUBMISSION'), 'Refund submission not available'
+            if not self.contract.validate_feature('REFUNDS_SUBMISSION'):
+                raise click.ClickException('Refund submission not available')
             building, new_nif = self.get_building(data.business_nif)
             self.console_logger.info('Building selected: %s', building)
             if new_nif != data.business_nif:
