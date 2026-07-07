@@ -91,7 +91,7 @@ class TestSubmitCommand(unittest.TestCase):
 
         # Verify calls
         mock_setup_logging.assert_called_once()
-        mock_ensure_error_details.assert_called_once_with()
+        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
         mock_client_class.assert_called_once()
         mock_contract.validate_feature.assert_called_once_with('REFUNDS_SUBMISSION')
         mock_get_building.assert_called_once_with('123456789')
@@ -138,7 +138,7 @@ class TestSubmitCommand(unittest.TestCase):
         with self.assertRaises(AssertionError):
             submit()
 
-        mock_ensure_error_details.assert_called_once_with()
+        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.ensure_error_details_files')
@@ -168,7 +168,7 @@ class TestSubmitCommand(unittest.TestCase):
             submit()
 
         mock_setup_logging.assert_called_once_with()
-        mock_ensure_error_details.assert_called_once_with()
+        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.translated_api_error_message')
@@ -202,7 +202,7 @@ class TestSubmitCommand(unittest.TestCase):
             submit()
 
         mock_setup_logging.assert_called_once_with()
-        mock_ensure_error_details.assert_called_once_with()
+        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
         mock_translate.assert_called_once_with(error)
 
     def test_setup_logging_labels_copied_input_files(self):

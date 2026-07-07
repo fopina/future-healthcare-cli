@@ -240,7 +240,4 @@ class FetchErrorDetails(CLI.Command, _mixins.TlsVerifyMixin):
     root_url: str = classyclick.Option(default=DEFAULT_ROOT_URL, help='Future Healthcare web UI root URL')
 
     def __call__(self):
-        fetch_kwargs = {}
-        if self.tls_verify is False:
-            fetch_kwargs['tls_verify'] = False
-        fetch_error_details(root_url=self.root_url, print_errors=True, **fetch_kwargs)
+        fetch_error_details(root_url=self.root_url, print_errors=True, tls_verify=self.tls_verify)

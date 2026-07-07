@@ -46,7 +46,4 @@ class TokenMixin(TlsVerifyMixin):
 
     @cached_property
     def client(self):
-        client_kwargs = {}
-        if self.tls_verify is False:
-            client_kwargs['verify'] = False
-        return Client(token=self.token, **client_kwargs)
+        return Client(token=self.token, verify=self.tls_verify)

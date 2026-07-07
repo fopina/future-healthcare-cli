@@ -139,7 +139,7 @@ class TestMixins(unittest.TestCase):
         mixin.__dict__['token'] = 'test_token'
 
         self.assertIs(mixin.client, mock_client_class.return_value)
-        mock_client_class.assert_called_once_with(token='test_token')
+        mock_client_class.assert_called_once_with(token='test_token', verify=True)
 
     @patch('futurehealth.commands._mixins.ContractClient')
     def test_contract_mixin(self, mock_contract_client):
@@ -181,7 +181,7 @@ class TestCommands(unittest.TestCase):
         cmd = login.Login(username='user', password='pass')
         cmd()
 
-        mock_client_class.assert_called_once_with()
+        mock_client_class.assert_called_once_with(verify=True)
         mock_client_class.return_value.login.assert_called_once_with('user', 'pass')
         mock_path.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True, mode=0o700)
         mock_path.write_text.assert_called_once_with('auth_token')
@@ -227,7 +227,7 @@ class TestCommands(unittest.TestCase):
 
             self.assertEqual(result.exit_code, 0, result.output)
             self.assertEqual(token_file.read_text(), 'auth_token')
-            mock_client_class.assert_called_once_with()
+            mock_client_class.assert_called_once_with(verify=True)
 
     @patch('futurehealth.client.Client')
     def test_group_locale_option_does_not_control_login_client_language(self, mock_client_class):
@@ -253,7 +253,7 @@ class TestCommands(unittest.TestCase):
             )
 
             self.assertEqual(result.exit_code, 0, result.output)
-            mock_client_class.assert_called_once_with()
+            mock_client_class.assert_called_once_with(verify=True)
 
     def test_group_locale_option_rejects_unsupported_locale(self):
         result = CliRunner().invoke(CLI.click, ['--locale', 'fr-FR', 'config'])

@@ -12,10 +12,7 @@ class Login(CLI.Command, _mixins.TlsVerifyMixin):
     password: str = classyclick.Option('-p', help='Password')
 
     def __call__(self):
-        client_kwargs = {}
-        if self.tls_verify is False:
-            client_kwargs['verify'] = False
-        c = client.Client(**client_kwargs)
+        c = client.Client(verify=self.tls_verify)
         try:
             r = c.login(self.username, self.password)
         except client.exceptions.LoginError as e:
