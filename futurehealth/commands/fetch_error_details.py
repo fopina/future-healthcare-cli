@@ -199,11 +199,13 @@ def translated_api_error_message(error: client.exceptions.ClientAPIError):
 
 
 def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):
-    root_response = requests.get(root_url, timeout=30)
+    verify = utils.tls_verify()
+
+    root_response = requests.get(root_url, timeout=30, verify=verify)
     root_response.raise_for_status()
 
     main_script_url = find_main_script_url(root_response.text, root_response.url)
-    script_response = requests.get(main_script_url, timeout=30)
+    script_response = requests.get(main_script_url, timeout=30, verify=verify)
     script_response.raise_for_status()
 
     error_details = extract_error_details(script_response.text)
@@ -212,7 +214,7 @@ def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):
     path.write_text(json.dumps(error_details, indent=2) + '\n')
 
     i18n_url = urljoin(root_response.url, f'assets/i18n/{utils.locale()}.json')
-    i18n_response = requests.get(i18n_url, timeout=30)
+    i18n_response = requests.get(i18n_url, timeout=30, verify=verify)
     i18n_response.raise_for_status()
     i18n_labels = i18n_response.json()
     i18n_path = i18n_path_for(path)

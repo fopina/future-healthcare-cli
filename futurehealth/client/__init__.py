@@ -22,6 +22,7 @@ class Client(requests.Session):
         token=None,
         partnership='vic',
         language='en-US',
+        verify=True,
         *args,
         **kwargs,
     ):
@@ -34,6 +35,7 @@ class Client(requests.Session):
             **kwargs: Additional keyword arguments for requests.Session
         """
         super().__init__(*args, **kwargs)
+        self.verify = verify
         self.base_url = base_url.rstrip('/')
         self.partnership = partnership
         self.language = language

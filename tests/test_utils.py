@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from futurehealth.commands.cli import CLI
-from futurehealth.utils import errors_path, logs_path, token_path, validate_nif
+from futurehealth.utils import errors_path, logs_path, tls_verify, token_path, validate_nif
 from futurehealth.utils import locale as fh_locale
 
 
@@ -53,6 +53,14 @@ class TestLocale(unittest.TestCase):
     def test_locale_rejects_unsupported_override(self):
         with self.assertRaises(ValueError):
             fh_locale(override='fr-FR')
+
+
+class TestTLSVerify(unittest.TestCase):
+    def test_tls_verify_defaults_to_enabled(self):
+        self.assertTrue(tls_verify())
+
+    def test_tls_verify_accepts_override(self):
+        self.assertFalse(tls_verify(override=False))
 
 
 class TestValidateNIF(unittest.TestCase):

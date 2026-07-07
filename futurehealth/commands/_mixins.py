@@ -3,7 +3,7 @@ from functools import cached_property
 import click
 
 from ..client import Client, ContractClient
-from ..utils import locale, token_path
+from ..utils import locale, tls_verify, token_path
 
 
 class ContractMixin:
@@ -26,4 +26,4 @@ class TokenMixin:
 
     @cached_property
     def client(self):
-        return Client(token=self.token, language=locale())
+        return Client(token=self.token, language=locale(), verify=tls_verify())
