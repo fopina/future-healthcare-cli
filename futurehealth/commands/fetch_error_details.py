@@ -9,6 +9,7 @@ import click
 import requests
 
 from .. import client, utils
+from . import _mixins
 from .cli import CLI
 
 DEFAULT_ROOT_URL = 'https://clientes-vic.future-healthcare.net/'
@@ -198,12 +199,16 @@ def translated_api_error_message(error: client.exceptions.ClientAPIError):
     return ' '.join(messages) or None
 
 
-def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):
-    root_response = requests.get(root_url, timeout=30)
+def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False, tls_verify=True):
+    request_kwargs = {'timeout': 30}
+    if tls_verify is False:
+        request_kwargs['verify'] = False
+
+    root_response = requests.get(root_url, **request_kwargs)
     root_response.raise_for_status()
 
     main_script_url = find_main_script_url(root_response.text, root_response.url)
-    script_response = requests.get(main_script_url, timeout=30)
+    script_response = requests.get(main_script_url, **request_kwargs)
     script_response.raise_for_status()
 
     error_details = extract_error_details(script_response.text)
@@ -212,7 +217,7 @@ def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):
     path.write_text(json.dumps(error_details, indent=2) + '\n')
 
     i18n_url = urljoin(root_response.url, f'assets/i18n/{utils.locale()}.json')
-    i18n_response = requests.get(i18n_url, timeout=30)
+    i18n_response = requests.get(i18n_url, **request_kwargs)
     i18n_response.raise_for_status()
     i18n_labels = i18n_response.json()
     i18n_path = i18n_path_for(path)
@@ -223,16 +228,16 @@ def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):
             click.echo(format_error_detail(error_detail, i18n_labels))
 
 
-def ensure_error_details_files():
+def ensure_error_details_files(tls_verify=True):
     path = utils.errors_path()
     if not path.exists() or not i18n_path_for(path).exists():
-        fetch_error_details()
+        fetch_error_details(tls_verify=tls_verify)
 
 
-class FetchErrorDetails(CLI.Command):
+class FetchErrorDetails(CLI.Command, _mixins.TlsVerifyMixin):
     """Fetch error codes from the Future Healthcare web UI bundle."""
 
     root_url: str = classyclick.Option(default=DEFAULT_ROOT_URL, help='Future Healthcare web UI root URL')
 
     def __call__(self):
-        fetch_error_details(root_url=self.root_url, print_errors=True)
+        fetch_error_details(root_url=self.root_url, print_errors=True, tls_verify=self.tls_verify)

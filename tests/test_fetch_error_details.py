@@ -196,7 +196,7 @@ class TestFetchErrorDetails(unittest.TestCase):
             with patch('futurehealth.commands.fetch_error_details.utils.errors_path', return_value=errors_path):
                 ensure_error_details_files()
 
-        mock_fetch.assert_called_once_with()
+        mock_fetch.assert_called_once()
 
     @patch('futurehealth.commands.fetch_error_details.fetch_error_details')
     def test_ensure_error_details_files_fetches_when_i18n_file_is_missing(self, mock_fetch):
@@ -207,7 +207,7 @@ class TestFetchErrorDetails(unittest.TestCase):
             with patch('futurehealth.commands.fetch_error_details.utils.errors_path', return_value=errors_path):
                 ensure_error_details_files()
 
-        mock_fetch.assert_called_once_with()
+        mock_fetch.assert_called_once()
 
     @patch('futurehealth.commands.fetch_error_details.fetch_error_details')
     def test_ensure_error_details_files_skips_fetch_when_cache_exists(self, mock_fetch):

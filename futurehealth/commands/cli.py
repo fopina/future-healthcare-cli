@@ -27,6 +27,7 @@ class CLI(classyclick.helpers.ConfigFileMixin, classyclick.Group):
         default=utils.locale(),
         help='Locale for Future Healthcare API requests: pt-PT or en-US',
     )
+    insecure: bool = classyclick.Option('-k', help='Disable TLS certificate verification')
 
     __config__ = classyclick.Group.Config(context_settings={'show_default': True})
 
@@ -43,3 +44,4 @@ class CLI(classyclick.helpers.ConfigFileMixin, classyclick.Group):
         self.ctx.meta['log_dir'] = self.log_dir
         self.ctx.meta['errors_path'] = self.errors_path
         self.ctx.meta['locale'] = self.locale
+        self.ctx.meta['tls_verify'] = not self.insecure

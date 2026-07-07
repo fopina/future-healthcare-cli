@@ -48,7 +48,7 @@ class TestCheck(unittest.TestCase):
         ):
             cmd()
 
-        ensure_error_details.assert_called_once_with()
+        ensure_error_details.assert_called_once_with(tls_verify=True)
         self.assertEqual(echo.call_count, 2)
         contract.unified_refunds.assert_called_once_with(page_size=20, page=1)
 
@@ -72,7 +72,7 @@ class TestCheck(unittest.TestCase):
             date.today.return_value = REAL_DATE(2026, 7, 2)
             cmd()
 
-        ensure_error_details.assert_called_once_with()
+        ensure_error_details.assert_called_once_with(tls_verify=True)
         self.assertEqual(echo.call_count, 2)
         contract.unified_refunds.assert_called_once_with(page_size=20, page=1)
 

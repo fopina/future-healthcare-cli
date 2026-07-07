@@ -14,7 +14,7 @@ class Check(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
     last_days: int = classyclick.Option(default=None, help='Only show refunds from the last N days')
 
     def __call__(self):
-        ensure_error_details_files()
+        ensure_error_details_files(tls_verify=self.tls_verify)
         self.validate_options()
         cutoff_date = self.cutoff_date
         shown = 0
