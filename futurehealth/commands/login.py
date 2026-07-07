@@ -2,7 +2,7 @@ import classyclick
 import click
 
 from .. import client
-from ..utils import locale, tls_verify, token_path
+from ..utils import locale, token_path
 from .cli import CLI
 
 
@@ -12,7 +12,8 @@ class Login(CLI.Command):
 
     def __call__(self):
         client_kwargs = {}
-        if not tls_verify():
+        ctx = click.get_current_context(silent=True)
+        if ctx is not None and ctx.meta.get('tls_verify') is False:
             client_kwargs['verify'] = False
         c = client.Client(language=locale(), **client_kwargs)
         try:

@@ -200,7 +200,8 @@ def translated_api_error_message(error: client.exceptions.ClientAPIError):
 
 def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):
     request_kwargs = {'timeout': 30}
-    if not utils.tls_verify():
+    ctx = click.get_current_context(silent=True)
+    if ctx is not None and ctx.meta.get('tls_verify') is False:
         request_kwargs['verify'] = False
 
     root_response = requests.get(root_url, **request_kwargs)

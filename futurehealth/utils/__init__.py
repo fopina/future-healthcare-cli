@@ -17,7 +17,7 @@ def config_dir(config_path: Path | str | None = None) -> Path:
     return CLI.CONFIG_DEFAULT_PATH.parent
 
 
-def _context_value(name: str):
+def _context_path(name: str) -> Path | None:
     try:
         import click
     except ImportError:
@@ -26,14 +26,8 @@ def _context_value(name: str):
     ctx = click.get_current_context(silent=True)
     while ctx is not None:
         if name in ctx.meta:
-            return ctx.meta[name]
+            return Path(ctx.meta[name])
         ctx = ctx.parent
-    return None
-
-
-def _context_path(name: str) -> Path | None:
-    if context_value := _context_value(name):
-        return Path(context_value)
     return None
 
 
@@ -82,17 +76,6 @@ def locale(override: str | None = None) -> str:
 
     detected_locale, _ = system_locale.getlocale()
     return normalize_locale(detected_locale) or DEFAULT_LOCALE
-
-
-def tls_verify(override: bool | None = None) -> bool:
-    if override is not None:
-        return override
-
-    context_value = _context_value('tls_verify')
-    if context_value is not None:
-        return bool(context_value)
-
-    return True
 
 
 def validate_nif(nif: str) -> bool:

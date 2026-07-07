@@ -3,7 +3,7 @@ from functools import cached_property
 import click
 
 from ..client import Client, ContractClient
-from ..utils import locale, tls_verify, token_path
+from ..utils import locale, token_path
 
 
 class ContractMixin:
@@ -27,6 +27,7 @@ class TokenMixin:
     @cached_property
     def client(self):
         client_kwargs = {}
-        if not tls_verify():
+        ctx = click.get_current_context(silent=True)
+        if ctx is not None and ctx.meta.get('tls_verify') is False:
             client_kwargs['verify'] = False
         return Client(token=self.token, language=locale(), **client_kwargs)
