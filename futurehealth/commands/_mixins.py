@@ -27,7 +27,6 @@ class TokenMixin:
     @cached_property
     def client(self):
         client_kwargs = {}
-        ctx = click.get_current_context(silent=True)
-        if ctx is not None and ctx.meta.get('tls_verify') is False:
+        if self.tls_verify is False:
             client_kwargs['verify'] = False
         return Client(token=self.token, language=locale(), **client_kwargs)

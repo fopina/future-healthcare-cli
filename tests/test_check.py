@@ -39,7 +39,7 @@ class TestCheck(unittest.TestCase):
             total_pages=2,
         )
 
-        cmd = Check(limit=2)
+        cmd = Check(tls_verify=True, limit=2)
         cmd.contract = contract
 
         with (
@@ -48,7 +48,7 @@ class TestCheck(unittest.TestCase):
         ):
             cmd()
 
-        ensure_error_details.assert_called_once_with()
+        ensure_error_details.assert_called_once_with(tls_verify=True)
         self.assertEqual(echo.call_count, 2)
         contract.unified_refunds.assert_called_once_with(page_size=20, page=1)
 
@@ -61,7 +61,7 @@ class TestCheck(unittest.TestCase):
             total_pages=2,
         )
 
-        cmd = Check(last_days=7)
+        cmd = Check(tls_verify=True, last_days=7)
         cmd.contract = contract
 
         with (
@@ -72,18 +72,18 @@ class TestCheck(unittest.TestCase):
             date.today.return_value = REAL_DATE(2026, 7, 2)
             cmd()
 
-        ensure_error_details.assert_called_once_with()
+        ensure_error_details.assert_called_once_with(tls_verify=True)
         self.assertEqual(echo.call_count, 2)
         contract.unified_refunds.assert_called_once_with(page_size=20, page=1)
 
     def test_invalid_limit_is_rejected(self):
-        cmd = Check(limit=0)
+        cmd = Check(tls_verify=True, limit=0)
 
         with self.assertRaises(click.ClickException):
             cmd.validate_options()
 
     def test_invalid_last_days_is_rejected(self):
-        cmd = Check(last_days=0)
+        cmd = Check(tls_verify=True, last_days=0)
 
         with self.assertRaises(click.ClickException):
             cmd.validate_options()

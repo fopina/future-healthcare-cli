@@ -22,7 +22,7 @@ class TestBeneficiaries(unittest.TestCase):
             other={},
         )
 
-        cmd = Beneficiaries()
+        cmd = Beneficiaries(tls_verify=True)
         cmd.contract = contract
 
         with patch('futurehealth.commands.beneficiaries.click.echo') as echo:
@@ -37,7 +37,7 @@ class TestBeneficiaries(unittest.TestCase):
         contract = MagicMock()
         contract.validate_feature.return_value = False
 
-        cmd = Beneficiaries()
+        cmd = Beneficiaries(tls_verify=True)
         cmd.contract = contract
 
         with self.assertRaises(click.ClickException):
@@ -49,7 +49,7 @@ class TestBeneficiaries(unittest.TestCase):
         contract = MagicMock()
         contract.validate_feature.side_effect = client.exceptions.ClientError('nope')
 
-        cmd = Beneficiaries()
+        cmd = Beneficiaries(tls_verify=True)
         cmd.contract = contract
 
         with self.assertRaises(click.ClickException) as exc:

@@ -198,10 +198,9 @@ def translated_api_error_message(error: client.exceptions.ClientAPIError):
     return ' '.join(messages) or None
 
 
-def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):
+def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False, tls_verify=True):
     request_kwargs = {'timeout': 30}
-    ctx = click.get_current_context(silent=True)
-    if ctx is not None and ctx.meta.get('tls_verify') is False:
+    if tls_verify is False:
         request_kwargs['verify'] = False
 
     root_response = requests.get(root_url, **request_kwargs)
@@ -228,16 +227,17 @@ def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False):
             click.echo(format_error_detail(error_detail, i18n_labels))
 
 
-def ensure_error_details_files():
+def ensure_error_details_files(tls_verify=True):
     path = utils.errors_path()
     if not path.exists() or not i18n_path_for(path).exists():
-        fetch_error_details()
+        fetch_error_details(tls_verify=tls_verify)
 
 
 class FetchErrorDetails(CLI.Command):
     """Fetch error codes from the Future Healthcare web UI bundle."""
 
+    tls_verify: bool = classyclick.ContextMeta('tls_verify')
     root_url: str = classyclick.Option(default=DEFAULT_ROOT_URL, help='Future Healthcare web UI root URL')
 
     def __call__(self):
-        fetch_error_details(root_url=self.root_url, print_errors=True)
+        fetch_error_details(root_url=self.root_url, print_errors=True, tls_verify=self.tls_verify)

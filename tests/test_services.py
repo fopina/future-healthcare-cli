@@ -22,7 +22,7 @@ class TestServices(unittest.TestCase):
             other={},
         )
 
-        cmd = Services()
+        cmd = Services(tls_verify=True)
         cmd.contract = contract
 
         with patch('futurehealth.commands.services.click.echo') as echo:
@@ -37,7 +37,7 @@ class TestServices(unittest.TestCase):
         contract = MagicMock()
         contract.validate_feature.return_value = False
 
-        cmd = Services()
+        cmd = Services(tls_verify=True)
         cmd.contract = contract
 
         with self.assertRaises(click.ClickException):
@@ -49,7 +49,7 @@ class TestServices(unittest.TestCase):
         contract = MagicMock()
         contract.validate_feature.side_effect = client.exceptions.ClientError('nope')
 
-        cmd = Services()
+        cmd = Services(tls_verify=True)
         cmd.contract = contract
 
         with self.assertRaises(click.ClickException) as exc:

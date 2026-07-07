@@ -19,7 +19,7 @@ from futurehealth.utils.models import ReceiptData
 
 class Test(unittest.TestCase):
     def test_login(self):
-        cmd = login.Login(username='x')
+        cmd = login.Login(tls_verify=True, username='x')
         self.assertEqual(cmd.username, 'x')
 
     def test_model_field_assignment(self):
@@ -138,6 +138,7 @@ class TestMixins(unittest.TestCase):
     def test_token_mixin_client_uses_group_locale(self, mock_client_class, mock_locale):
         mixin = TokenMixin()
         mixin.__dict__['token'] = 'test_token'
+        mixin.tls_verify = True
 
         self.assertIs(mixin.client, mock_client_class.return_value)
         mock_client_class.assert_called_once_with(token='test_token', language='pt-PT')
@@ -181,7 +182,7 @@ class TestCommands(unittest.TestCase):
         mock_path = MagicMock()
         mock_token_path.return_value = mock_path
 
-        cmd = login.Login(username='user', password='pass')
+        cmd = login.Login(tls_verify=True, username='user', password='pass')
         cmd()
 
         mock_client_class.assert_called_once_with(language='pt-PT')
@@ -197,7 +198,7 @@ class TestCommands(unittest.TestCase):
 
         mock_client_class.return_value.login.side_effect = client.exceptions.LoginError('Invalid credentials')
 
-        cmd = login.Login(username='user', password='wrong')
+        cmd = login.Login(tls_verify=True, username='user', password='wrong')
 
         with self.assertRaises(Exception):  # Should raise ClickException
             cmd()

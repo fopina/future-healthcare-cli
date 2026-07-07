@@ -7,13 +7,13 @@ from .cli import CLI
 
 
 class Login(CLI.Command):
+    tls_verify: bool = classyclick.ContextMeta('tls_verify')
     username: str = classyclick.Option('-u', help='Username')
     password: str = classyclick.Option('-p', help='Password')
 
     def __call__(self):
         client_kwargs = {}
-        ctx = click.get_current_context(silent=True)
-        if ctx is not None and ctx.meta.get('tls_verify') is False:
+        if self.tls_verify is False:
             client_kwargs['verify'] = False
         c = client.Client(language=locale(), **client_kwargs)
         try:
