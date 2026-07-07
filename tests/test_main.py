@@ -133,16 +133,14 @@ class TestMixins(unittest.TestCase):
             with self.assertRaises(Exception):  # Should raise ClickException
                 _ = mixin.token
 
-    @patch('futurehealth.commands._mixins.locale', return_value='pt-PT')
     @patch('futurehealth.commands._mixins.Client')
-    def test_token_mixin_client_uses_group_locale(self, mock_client_class, mock_locale):
+    def test_token_mixin_client_uses_default_language(self, mock_client_class):
         mixin = TokenMixin()
         mixin.__dict__['token'] = 'test_token'
         mixin.tls_verify = True
 
         self.assertIs(mixin.client, mock_client_class.return_value)
-        mock_client_class.assert_called_once_with(token='test_token', language='pt-PT')
-        mock_locale.assert_called_once_with()
+        mock_client_class.assert_called_once_with(token='test_token')
 
     @patch('futurehealth.commands._mixins.ContractClient')
     def test_contract_mixin(self, mock_contract_client):
@@ -172,10 +170,9 @@ class TestMixins(unittest.TestCase):
 
 
 class TestCommands(unittest.TestCase):
-    @patch('futurehealth.commands.login.locale', return_value='pt-PT')
     @patch('futurehealth.commands.login.token_path')
     @patch('futurehealth.client.Client')
-    def test_login_success(self, mock_client_class, mock_token_path, mock_locale):
+    def test_login_success(self, mock_client_class, mock_token_path):
         """Test successful login."""
         mock_client_class.return_value.login.return_value = {'body': {'token': 'auth_token'}}
 
@@ -185,8 +182,7 @@ class TestCommands(unittest.TestCase):
         cmd = login.Login(tls_verify=True, username='user', password='pass')
         cmd()
 
-        mock_client_class.assert_called_once_with(language='pt-PT')
-        mock_locale.assert_called_once_with()
+        mock_client_class.assert_called_once_with()
         mock_client_class.return_value.login.assert_called_once_with('user', 'pass')
         mock_path.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True, mode=0o700)
         mock_path.write_text.assert_called_once_with('auth_token')
@@ -232,10 +228,10 @@ class TestCommands(unittest.TestCase):
 
             self.assertEqual(result.exit_code, 0, result.output)
             self.assertEqual(token_file.read_text(), 'auth_token')
-            mock_client_class.assert_called_once_with(language='en-US')
+            mock_client_class.assert_called_once_with()
 
     @patch('futurehealth.client.Client')
-    def test_group_locale_option_controls_login_client_language(self, mock_client_class):
+    def test_group_locale_option_does_not_control_login_client_language(self, mock_client_class):
         mock_client_class.return_value.login.return_value = {'body': {'token': 'auth_token'}}
 
         with TemporaryDirectory() as tmp:
@@ -258,7 +254,7 @@ class TestCommands(unittest.TestCase):
             )
 
             self.assertEqual(result.exit_code, 0, result.output)
-            mock_client_class.assert_called_once_with(language='pt-PT')
+            mock_client_class.assert_called_once_with()
 
     def test_group_locale_option_rejects_unsupported_locale(self):
         result = CliRunner().invoke(CLI.click, ['--locale', 'fr-FR', 'config'])

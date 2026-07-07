@@ -2,7 +2,7 @@ import classyclick
 import click
 
 from .. import client
-from ..utils import locale, token_path
+from ..utils import token_path
 from .cli import CLI
 
 
@@ -15,7 +15,7 @@ class Login(CLI.Command):
         client_kwargs = {}
         if self.tls_verify is False:
             client_kwargs['verify'] = False
-        c = client.Client(language=locale(), **client_kwargs)
+        c = client.Client(**client_kwargs)
         try:
             r = c.login(self.username, self.password)
         except client.exceptions.LoginError as e:

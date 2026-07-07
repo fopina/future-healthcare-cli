@@ -3,7 +3,7 @@ from functools import cached_property
 import click
 
 from ..client import Client, ContractClient
-from ..utils import locale, token_path
+from ..utils import token_path
 
 
 class ContractMixin:
@@ -29,4 +29,4 @@ class TokenMixin:
         client_kwargs = {}
         if self.tls_verify is False:
             client_kwargs['verify'] = False
-        return Client(token=self.token, language=locale(), **client_kwargs)
+        return Client(token=self.token, **client_kwargs)
