@@ -63,6 +63,7 @@ class TestClientRequestErrors(unittest.TestCase):
     def test_request_raises_generic_client_error_for_non_json_error_response(self):
         response = MagicMock()
         response.status_code = 500
+        response.text = 'Internal server error'
         response.json.side_effect = ValueError('not json')
 
         with patch.object(requests.Session, 'request', return_value=response):
@@ -70,4 +71,4 @@ class TestClientRequestErrors(unittest.TestCase):
                 Client(base_url='https://example.test').get('contracts')
 
         self.assertIs(type(raised.exception), exceptions.ClientError)
-        self.assertEqual(str(raised.exception), 'Unexpected error')
+        self.assertEqual(str(raised.exception), 'Unexpected error: Internal server error')

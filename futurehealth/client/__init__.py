@@ -76,7 +76,7 @@ class Client(requests.Session):
             try:
                 rd = r.json()
             except Exception:
-                exc = exceptions.ClientError('Unexpected error')
+                exc = exceptions.ClientError(f'Unexpected error: {r.text}')
             else:
                 exc = exceptions.ClientAPIError(
                     rd,
