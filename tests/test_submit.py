@@ -57,21 +57,23 @@ class TestSubmitCommand(unittest.TestCase):
         # Setup mocks
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
-        mock_client.files.return_value = {'guid': 'file_guid'}
 
         mock_contract = MagicMock()
         mock_contract.validate_feature.return_value = True
         mock_contract.multiple_refunds_requests.return_value = None
         mock_contract_client.return_value = mock_contract
 
+        calls = []
+
         mock_building = Building(id='building_123', name='Hospital A', address='123 Main St')
-        mock_get_building.return_value = (mock_building, '123456789')
+        mock_get_building.side_effect = lambda nif: calls.append('building') or (mock_building, nif)
 
         mock_service = Service(id=1, name='Medical Service', mantory_invoice_file=True, mantory_additional_file=False)
-        mock_get_service.return_value = mock_service
+        mock_get_service.side_effect = lambda: calls.append('service') or mock_service
 
         mock_person = Person(card_number='123456789', name='John Doe', email='john@example.com')
-        mock_get_person.return_value = mock_person
+        mock_get_person.side_effect = lambda: calls.append('person') or mock_person
+        mock_client.files.side_effect = lambda *args, **kwargs: calls.append('files') or {'guid': 'file_guid'}
 
         # Create submit command
         submit = Submit(
@@ -98,6 +100,7 @@ class TestSubmitCommand(unittest.TestCase):
         mock_client.files.assert_called_once()
         mock_get_service.assert_called_once()
         mock_get_person.assert_called_once()
+        self.assertEqual(calls, ['building', 'service', 'person', 'files'])
         mock_contract.multiple_refunds_requests.assert_called_once_with(
             '123456789',  # person.card_number
             1,  # service.id
@@ -139,6 +142,98 @@ class TestSubmitCommand(unittest.TestCase):
             submit()
 
         mock_ensure_error_details.assert_called_once_with(tls_verify=True)
+
+    @patch('futurehealth.commands.submit.Submit.setup_logging')
+    @patch('futurehealth.commands.submit.Submit.get_building')
+    @patch('futurehealth.commands.submit.Submit.get_service')
+    @patch('futurehealth.commands.submit.ensure_error_details_files')
+    @patch('futurehealth.commands._mixins.Client')
+    def test_submit_does_not_upload_when_service_selection_fails(
+        self,
+        mock_client_class,
+        mock_ensure_error_details,
+        mock_get_service,
+        mock_get_building,
+        mock_setup_logging,
+    ):
+        """Test submit resolves service before uploading documents."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_contract = MagicMock()
+        mock_contract.validate_feature.return_value = True
+        mock_get_building.return_value = (Building(id='building_123', name='Hospital A'), '123456789')
+        mock_get_service.side_effect = click.ClickException('Multiple services found')
+
+        submit = Submit(
+            receipt_file=Path('test.pdf'),
+            business_nif='123456789',
+            invoice_number='INV001',
+            total_amount=100.50,
+            date='2023-01-01',
+        )
+        submit.contract = mock_contract
+        submit.file_logger = MagicMock()
+        submit.console_logger = MagicMock()
+        submit.token = 'test_token'
+
+        with self.assertRaisesRegex(click.ClickException, 'Multiple services found'):
+            submit()
+
+        mock_setup_logging.assert_called_once()
+        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
+        mock_client.files.assert_not_called()
+        mock_contract.multiple_refunds_requests.assert_not_called()
+
+    @patch('futurehealth.commands.submit.Submit.setup_logging')
+    @patch('futurehealth.commands.submit.Submit.get_building')
+    @patch('futurehealth.commands.submit.Submit.get_service')
+    @patch('futurehealth.commands.submit.Submit.get_person')
+    @patch('futurehealth.commands.submit.ensure_error_details_files')
+    @patch('futurehealth.commands._mixins.Client')
+    def test_submit_does_not_upload_when_person_selection_fails(
+        self,
+        mock_client_class,
+        mock_ensure_error_details,
+        mock_get_person,
+        mock_get_service,
+        mock_get_building,
+        mock_setup_logging,
+    ):
+        """Test submit resolves person before uploading documents."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_contract = MagicMock()
+        mock_contract.validate_feature.return_value = True
+        mock_get_building.return_value = (Building(id='building_123', name='Hospital A'), '123456789')
+        mock_get_service.return_value = Service(
+            id=1,
+            name='Medical Service',
+            mantory_invoice_file=True,
+            mantory_additional_file=False,
+        )
+        mock_get_person.side_effect = click.ClickException('Multiple persons found')
+
+        submit = Submit(
+            receipt_file=Path('test.pdf'),
+            business_nif='123456789',
+            invoice_number='INV001',
+            total_amount=100.50,
+            date='2023-01-01',
+        )
+        submit.contract = mock_contract
+        submit.file_logger = MagicMock()
+        submit.console_logger = MagicMock()
+        submit.token = 'test_token'
+
+        with self.assertRaisesRegex(click.ClickException, 'Multiple persons found'):
+            submit()
+
+        mock_setup_logging.assert_called_once()
+        mock_ensure_error_details.assert_called_once_with(tls_verify=True)
+        mock_client.files.assert_not_called()
+        mock_contract.multiple_refunds_requests.assert_not_called()
 
     @patch('futurehealth.commands.submit.Submit.setup_logging')
     @patch('futurehealth.commands.submit.ensure_error_details_files')

@@ -59,6 +59,11 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                 self.console_logger.info('NIF fixed from %s to %s', data.business_nif, new_nif)
                 data.business_nif = new_nif
 
+            service = self.get_service()
+            self.console_logger.info('Service selected: %s - %s', service.id, service.name)
+            person = self.get_person()
+            self.console_logger.info('Person selected: %s - %s', person.card_number, person.name)
+
             docs = []
             docs.append(self.client.files(self.receipt_file, is_invoice=True)['guid'])
             self.console_logger.info('Document created: %s', docs[-1])
@@ -66,10 +71,6 @@ class Submit(CLI.Command, _mixins.ContractMixin, _mixins.TokenMixin):
                 docs.append(self.client.files(other)['guid'])
                 self.console_logger.info('Document created: %s', docs[-1])
 
-            service = self.get_service()
-            self.console_logger.info('Service selected: %s - %s', service.id, service.name)
-            person = self.get_person()
-            self.console_logger.info('Person selected: %s - %s', person.card_number, person.name)
             self.contract.multiple_refunds_requests(
                 person.card_number,
                 service.id,
