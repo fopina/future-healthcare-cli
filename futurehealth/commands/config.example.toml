@@ -18,6 +18,7 @@
 # token_path = "/path/to/token.txt"
 # log_dir = "/path/to/logs"
 # errors_path = "/path/to/errors.json"
+# Locale for translated API error messages, not for API requests.
 # locale = "pt-PT"
 #
 # [env.personal.submit]

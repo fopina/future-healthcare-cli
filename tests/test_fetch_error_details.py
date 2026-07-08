@@ -188,6 +188,14 @@ class TestFetchErrorDetails(unittest.TestCase):
             with patch('futurehealth.commands.fetch_error_details.utils.errors_path', return_value=errors_path):
                 self.assertIsNone(translated_api_error_message(error))
 
+    def test_translated_api_error_message_returns_none_when_cache_files_are_missing(self):
+        with TemporaryDirectory() as tmp:
+            errors_path = Path(tmp) / 'errors.json'
+            error = exceptions.ClientAPIError({'resultCode': -108, 'resultCodeDetail': 'error.api.missing'})
+
+            with patch('futurehealth.commands.fetch_error_details.utils.errors_path', return_value=errors_path):
+                self.assertIsNone(translated_api_error_message(error))
+
     @patch('futurehealth.commands.fetch_error_details.fetch_error_details')
     def test_ensure_error_details_files_fetches_when_errors_file_is_missing(self, mock_fetch):
         with TemporaryDirectory() as tmp:
@@ -220,6 +228,26 @@ class TestFetchErrorDetails(unittest.TestCase):
                 ensure_error_details_files()
 
         mock_fetch.assert_not_called()
+
+    @patch('futurehealth.commands.fetch_error_details.fetch_error_details')
+    def test_ensure_error_details_files_logs_and_continues_when_fetch_fails(self, mock_fetch):
+        mock_fetch.side_effect = RuntimeError('network down')
+        with TemporaryDirectory() as tmp:
+            errors_path = Path(tmp) / 'errors.json'
+
+            with (
+                patch('futurehealth.commands.fetch_error_details.utils.errors_path', return_value=errors_path),
+                self.assertLogs('futurehealth.commands.fetch_error_details', level='ERROR') as logs,
+            ):
+                ensure_error_details_files()
+
+        mock_fetch.assert_called_once()
+        self.assertEqual(
+            logs.output,
+            [
+                'ERROR:futurehealth.commands.fetch_error_details:Could not fetch Future Healthcare error details: network down'
+            ],
+        )
 
     @patch('futurehealth.commands.fetch_error_details.requests.get')
     def test_command_fetches_main_script_and_writes_default_errors_file(self, mock_get):

@@ -25,7 +25,7 @@ class CLI(classyclick.helpers.ConfigFileMixin, classyclick.Group):
     )
     locale: str = classyclick.Option(
         default=utils.locale(),
-        help='Locale for Future Healthcare API requests: pt-PT or en-US',
+        help='Locale for translated Future Healthcare API error messages: pt-PT or en-US',
     )
     insecure: bool = classyclick.Option('-k', help='Disable TLS certificate verification')
 
