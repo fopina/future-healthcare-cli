@@ -1,3 +1,4 @@
+import unittest
 from unittest.mock import MagicMock, patch
 
 import requests
@@ -5,78 +6,68 @@ import requests
 from futurehealth.client import Client, exceptions
 
 
-def test_request_uses_default_timeout():
-    response = MagicMock()
-    response.status_code = 200
-    response.json.return_value = {'success': True}
+class TestClientRequestTimeout(unittest.TestCase):
+    def success_response(self):
+        response = MagicMock()
+        response.status_code = 200
+        response.json.return_value = {'success': True}
+        return response
 
-    with patch.object(requests.Session, 'request', return_value=response) as mock_request:
-        Client(base_url='https://example.test').get('contracts')
-
-    assert mock_request.call_args.kwargs['timeout'] == 30
-
-
-def test_request_honors_explicit_timeout():
-    response = MagicMock()
-    response.status_code = 200
-    response.json.return_value = {'success': True}
-
-    with patch.object(requests.Session, 'request', return_value=response) as mock_request:
-        Client(base_url='https://example.test').get('contracts', timeout=5)
-
-    assert mock_request.call_args.kwargs['timeout'] == 5
-
-
-def test_request_can_disable_default_timeout():
-    response = MagicMock()
-    response.status_code = 200
-    response.json.return_value = {'success': True}
-
-    with patch.object(requests.Session, 'request', return_value=response) as mock_request:
-        Client(base_url='https://example.test', timeout=None).get('contracts')
-
-    assert 'timeout' not in mock_request.call_args.kwargs
-
-
-def test_request_raises_structured_api_error_for_error_json_response():
-    response = MagicMock()
-    response.status_code = 409
-    response.json.return_value = {
-        'success': False,
-        'resultMessage': 'Validation failed',
-        'resultCode': -108,
-        'resultCodeDetail': 'error.api.missing_request_data',
-        'body': {'field': 'receipt'},
-    }
-
-    with patch.object(requests.Session, 'request', return_value=response):
-        try:
+    def test_request_uses_default_timeout(self):
+        with patch.object(requests.Session, 'request', return_value=self.success_response()) as mock_request:
             Client(base_url='https://example.test').get('contracts')
-        except exceptions.ClientAPIError as exc:
-            assert isinstance(exc, exceptions.ClientError)
-            assert str(exc) == 'Contracts - Validation failed - error.api.missing_request_data (409)'
-            assert exc.data == response.json.return_value
-            assert exc.status_code == 409
-            assert exc.response is response
-            assert exc.success is False
-            assert exc.result_message == 'Validation failed'
-            assert exc.result_code == -108
-            assert exc.result_code_detail == 'error.api.missing_request_data'
-            assert exc.body == {'field': 'receipt'}
-        else:
-            raise AssertionError('ClientAPIError was not raised')
+
+        self.assertEqual(mock_request.call_args.kwargs['timeout'], 30)
+
+    def test_request_honors_explicit_timeout(self):
+        with patch.object(requests.Session, 'request', return_value=self.success_response()) as mock_request:
+            Client(base_url='https://example.test').get('contracts', timeout=5)
+
+        self.assertEqual(mock_request.call_args.kwargs['timeout'], 5)
+
+    def test_request_can_disable_default_timeout(self):
+        with patch.object(requests.Session, 'request', return_value=self.success_response()) as mock_request:
+            Client(base_url='https://example.test', timeout=None).get('contracts')
+
+        self.assertNotIn('timeout', mock_request.call_args.kwargs)
 
 
-def test_request_raises_generic_client_error_for_non_json_error_response():
-    response = MagicMock()
-    response.status_code = 500
-    response.json.side_effect = ValueError('not json')
+class TestClientRequestErrors(unittest.TestCase):
+    def test_request_raises_structured_api_error_for_error_json_response(self):
+        response = MagicMock()
+        response.status_code = 409
+        response.json.return_value = {
+            'success': False,
+            'resultMessage': 'Validation failed',
+            'resultCode': -108,
+            'resultCodeDetail': 'error.api.missing_request_data',
+            'body': {'field': 'receipt'},
+        }
 
-    with patch.object(requests.Session, 'request', return_value=response):
-        try:
-            Client(base_url='https://example.test').get('contracts')
-        except exceptions.ClientError as exc:
-            assert type(exc) is exceptions.ClientError
-            assert str(exc) == 'Unexpected error'
-        else:
-            raise AssertionError('ClientError was not raised')
+        with patch.object(requests.Session, 'request', return_value=response):
+            with self.assertRaises(exceptions.ClientAPIError) as raised:
+                Client(base_url='https://example.test').get('contracts')
+
+        exc = raised.exception
+        self.assertIsInstance(exc, exceptions.ClientError)
+        self.assertEqual(str(exc), 'Contracts - Validation failed - error.api.missing_request_data (409)')
+        self.assertEqual(exc.data, response.json.return_value)
+        self.assertEqual(exc.status_code, 409)
+        self.assertIs(exc.response, response)
+        self.assertIs(exc.success, False)
+        self.assertEqual(exc.result_message, 'Validation failed')
+        self.assertEqual(exc.result_code, -108)
+        self.assertEqual(exc.result_code_detail, 'error.api.missing_request_data')
+        self.assertEqual(exc.body, {'field': 'receipt'})
+
+    def test_request_raises_generic_client_error_for_non_json_error_response(self):
+        response = MagicMock()
+        response.status_code = 500
+        response.json.side_effect = ValueError('not json')
+
+        with patch.object(requests.Session, 'request', return_value=response):
+            with self.assertRaises(exceptions.ClientError) as raised:
+                Client(base_url='https://example.test').get('contracts')
+
+        self.assertIs(type(raised.exception), exceptions.ClientError)
+        self.assertEqual(str(raised.exception), 'Unexpected error')
