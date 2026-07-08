@@ -5,6 +5,39 @@ import requests
 from futurehealth.client import Client, exceptions
 
 
+def test_request_uses_default_timeout():
+    response = MagicMock()
+    response.status_code = 200
+    response.json.return_value = {'success': True}
+
+    with patch.object(requests.Session, 'request', return_value=response) as mock_request:
+        Client(base_url='https://example.test').get('contracts')
+
+    assert mock_request.call_args.kwargs['timeout'] == 30
+
+
+def test_request_honors_explicit_timeout():
+    response = MagicMock()
+    response.status_code = 200
+    response.json.return_value = {'success': True}
+
+    with patch.object(requests.Session, 'request', return_value=response) as mock_request:
+        Client(base_url='https://example.test').get('contracts', timeout=5)
+
+    assert mock_request.call_args.kwargs['timeout'] == 5
+
+
+def test_request_can_disable_default_timeout():
+    response = MagicMock()
+    response.status_code = 200
+    response.json.return_value = {'success': True}
+
+    with patch.object(requests.Session, 'request', return_value=response) as mock_request:
+        Client(base_url='https://example.test', timeout=None).get('contracts')
+
+    assert 'timeout' not in mock_request.call_args.kwargs
+
+
 def test_request_raises_structured_api_error_for_error_json_response():
     response = MagicMock()
     response.status_code = 409

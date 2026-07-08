@@ -22,6 +22,7 @@ class Client(requests.Session):
         token=None,
         partnership='vic',
         language='en-US',
+        timeout=30,
         verify=True,
         *args,
         **kwargs,
@@ -39,6 +40,7 @@ class Client(requests.Session):
         self.base_url = base_url.rstrip('/')
         self.partnership = partnership
         self.language = language
+        self.timeout = timeout
         self.token = token
 
     def request(self, method, url, *args, _token=False, headers=None, **kwargs):
@@ -67,6 +69,8 @@ class Client(requests.Session):
             )
             if _token:
                 headers['Authorization'] = f'Bearer {self.token}'
+        if self.timeout is not None and 'timeout' not in kwargs:
+            kwargs['timeout'] = self.timeout
         r = super().request(method, url, *args, headers=headers, **kwargs)
         if r.status_code != 200:
             try:

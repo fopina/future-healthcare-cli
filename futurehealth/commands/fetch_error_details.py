@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from html import unescape
 from html.parser import HTMLParser
@@ -13,6 +14,7 @@ from . import _mixins
 from .cli import CLI
 
 DEFAULT_ROOT_URL = 'https://clientes-vic.future-healthcare.net/'
+LOGGER = logging.getLogger(__name__)
 
 
 class ScriptSrcParser(HTMLParser):
@@ -230,8 +232,11 @@ def fetch_error_details(root_url=DEFAULT_ROOT_URL, print_errors=False, tls_verif
 
 def ensure_error_details_files(tls_verify=True):
     path = utils.errors_path()
-    if not path.exists() or not i18n_path_for(path).exists():
-        fetch_error_details(tls_verify=tls_verify)
+    try:
+        if not path.exists() or not i18n_path_for(path).exists():
+            fetch_error_details(tls_verify=tls_verify)
+    except Exception as exc:
+        LOGGER.error('Could not fetch Future Healthcare error details: %s', exc)
 
 
 class FetchErrorDetails(CLI.Command, _mixins.TlsVerifyMixin):
